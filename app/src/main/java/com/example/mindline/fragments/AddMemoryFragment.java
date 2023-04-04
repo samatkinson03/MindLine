@@ -1,10 +1,13 @@
 package com.example.mindline.fragments;
 
+import static android.service.controls.ControlsProviderService.TAG;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,7 +32,10 @@ import com.example.mindline.adapters.ImageAdapter;
 import com.example.mindline.models.Memory;
 import com.example.mindline.models.MemoryViewModel;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -84,6 +90,12 @@ public class AddMemoryFragment extends Fragment {
             return;
         }
 
+        long selectedDateInMillis = getDateInMillis(dateStr);
+        if (selectedDateInMillis > System.currentTimeMillis()) {
+            Toast.makeText(requireContext(), "Please select a date in the past or today", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         Memory memory = new Memory(title, description, dateStr);
         List<String> imageUrisAsString = imageUris.stream().map(Uri::toString).collect(Collectors.toList());
         memory.setImageUris(new ArrayList<>(imageUrisAsString));
@@ -129,6 +141,19 @@ public class AddMemoryFragment extends Fragment {
 
         imageRecyclerView.setAdapter(imageAdapterHolder[0]);
         imageRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
+    }
+
+    private long getDateInMillis(String date) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+        dateFormat.setLenient(false);
+
+        try {
+            Date parsedDate = dateFormat.parse(date);
+            return parsedDate.getTime();
+        } catch (ParseException e) {
+            Log.e(TAG, "Error parsing date", e);
+            return -1;
+        }
     }
 
 

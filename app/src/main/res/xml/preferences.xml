@@ -10,8 +10,7 @@
 
     <Preference
                 app:key="logout"
-                app:title="@string/log_out"
-                app:summary="@string/log_out_summary" />
+                app:title="@string/log_out"/>
 
 
 

@@ -128,6 +128,10 @@ public class SignUpActivity extends AppCompatActivity {
             Toast.makeText(this, "Passwords do not match", Toast.LENGTH_SHORT).show();
             return;
         }
+        if (getDateInMillis(dateOfBirth) > System.currentTimeMillis()) {
+            Toast.makeText(this, "Please enter a valid date of birth", Toast.LENGTH_SHORT).show();
+            return;
+        }
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {

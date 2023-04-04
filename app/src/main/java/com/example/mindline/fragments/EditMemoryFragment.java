@@ -183,7 +183,13 @@ public class EditMemoryFragment extends Fragment {
             return false;
         }
         String date = year + "-" + String.format("%02d", month + 1) + "-" + String.format("%02d", day);
-
+        Calendar selectedDate = Calendar.getInstance();
+        selectedDate.set(year, month, day);
+        Calendar currentDate = Calendar.getInstance();
+        if (selectedDate.after(currentDate)) {
+            Toast.makeText(requireContext(), "Please select a date in the past or today", Toast.LENGTH_SHORT).show();
+            return false;
+        }
         // Update memory in the database
         Memory memory = new Memory(title, description, date);
         memory.setId(memoryId);
