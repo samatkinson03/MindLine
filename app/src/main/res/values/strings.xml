@@ -1,0 +1,37 @@
+<resources>
+    <string name="app_name">MindLine</string>
+    <string name="delete_memory">Delete Memory</string>
+    <string name="delete_memory_confirmation">Are you sure you want to delete this memory?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="search">Search</string>
+    <string name="edit_memory">Edit Memory</string>
+    <string name="add_memory">Add Memory</string>
+    <string name="sign_in">Sign In</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <!-- Sign In Activity -->
+    <string name="sign_in_title">Sign In</string>
+    <string name="email_hint">Email</string>
+    <string name="password_hint">Password</string>
+    <string name="sign_in_button">Sign In</string>
+    <string name="no_account_message">Don\'t have an account?</string>
+    <string name="sign_up_link">Sign Up</string>
+
+    <!-- Sign Up Activity -->
+    <string name="sign_up">Sign Up</string>
+    <string name="name_hint">Name</string>
+    <string name="dob_hint">Date of Birth (MM/DD/YYYY)</string>
+    <string name="create_account_button">Create Account</string>
+    <string name="already_have_account_message">Already have an account?</string>
+    <string name="sign_in_link">Sign In</string>
+
+    <!-- Date of Birth Activity -->
+    <string name="dob_activity_title">Date of Birth</string>
+    <string name="dob_continue_button">Continue</string>
+    <string name="sign_up_button_text">Sign Up</string>
+    <string name="date_of_birth">Date Of Birth</string>
+    <string name="confirm_password_hint">Confirm Password</string>
+    <string name="back">Back</string>
+    <string name="log_out">Log Out</string>
+</resources>

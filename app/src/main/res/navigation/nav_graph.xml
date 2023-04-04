@@ -1,0 +1,55 @@
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    app:startDestination="@id/timelineFragment">
+
+    <fragment
+        android:id="@+id/timelineFragment"
+        android:name="com.example.mindline.fragments.TimelineFragment"
+        android:label="TimelineFragment">
+        <argument
+            android:name="memoryId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+        <action
+            android:id="@+id/action_timelineFragment_to_memoryDetailFragment"
+            app:destination="@id/memoryDetailFragment" />
+        <action
+            android:id="@+id/action_timelineFragment_to_addMemoryFragment"
+            app:destination="@id/addMemoryFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/addMemoryFragment"
+        android:name="com.example.mindline.fragments.AddMemoryFragment"
+        android:label="AddMemoryFragment">
+        <action
+            android:id="@+id/action_addMemoryFragment_to_memoryListFragment"
+            app:destination="@id/timelineFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/memoryDetailFragment"
+        android:name="com.example.mindline.fragments.MemoryDetailFragment"
+        android:label="MemoryDetailFragment">
+        <argument
+            android:name="memoryId"
+            app:argType="long" />
+        <action
+            android:id="@+id/action_memoryDetailFragment_to_editMemoryFragment"
+            app:destination="@id/editMemoryFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/editMemoryFragment"
+        android:name="com.example.mindline.fragments.EditMemoryFragment"
+        android:label="EditMemoryFragment">
+        <argument
+            android:name="memoryId"
+            app:argType="long" />
+        <action
+            android:id="@+id/action_editMemoryFragment_to_memoryListFragment"
+            app:destination="@id/timelineFragment" />
+    </fragment>
+
+</navigation>

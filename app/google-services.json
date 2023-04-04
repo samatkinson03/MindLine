@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "863129274017",
+    "project_id": "mindline-381815",
+    "storage_bucket": "mindline-381815.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:863129274017:android:4b3dcc0c95406362b192e0",
+        "android_client_info": {
+          "package_name": "com.example.mindline.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "863129274017-b2l9ukhge2pbsbjm00ocvqs4mq3ti58o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_y_UON0rP7BdoUkmmmzpGwrTWB4p9ppg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "863129274017-b2l9ukhge2pbsbjm00ocvqs4mq3ti58o.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
