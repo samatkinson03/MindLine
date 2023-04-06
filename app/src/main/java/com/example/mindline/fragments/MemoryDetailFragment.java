@@ -1,12 +1,14 @@
 package com.example.mindline.fragments;
 
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -17,6 +19,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.mindline.R;
 import com.example.mindline.activities.EditMemoryActivity;
 import com.example.mindline.adapters.ImageAdapter;
@@ -98,9 +101,24 @@ public class MemoryDetailFragment extends Fragment {
                 memoryImagesLabel.setVisibility(View.VISIBLE);
                 memoryImagesRecyclerView.setVisibility(View.VISIBLE);
                 memoryImagesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
-                memoryImagesRecyclerView.setAdapter(new ImageAdapter(requireContext(), (ArrayList<Uri>) imageUris));
+                memoryImagesRecyclerView.setAdapter(new ImageAdapter(requireContext(), (ArrayList<Uri>) imageUris, position -> {
+                    Uri selectedImageUri = imageUris.get(position);
+                    showImageInFullScreen(selectedImageUri);
+                }, false));
             }
         }
+    }
+
+    private void showImageInFullScreen(Uri imageUri) {
+        Dialog fullScreenImageDialog = new Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        fullScreenImageDialog.setContentView(R.layout.full_screen_image_dialog);
+
+        ImageView fullScreenImageView = fullScreenImageDialog.findViewById(R.id.full_screen_image_view);
+        Glide.with(requireContext()).load(imageUri).into(fullScreenImageView);
+
+        fullScreenImageView.setOnClickListener(v -> fullScreenImageDialog.dismiss());
+
+        fullScreenImageDialog.show();
     }
 
     private void editMemory() {

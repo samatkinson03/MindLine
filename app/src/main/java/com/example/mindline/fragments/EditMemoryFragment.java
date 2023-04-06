@@ -1,10 +1,17 @@
 package com.example.mindline.fragments;
 
+import static android.service.controls.ControlsProviderService.TAG;
+
+import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +23,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -34,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class EditMemoryFragment extends Fragment {
     private static final int PICK_IMAGE = 1;
@@ -43,6 +53,8 @@ public class EditMemoryFragment extends Fragment {
     private DatePicker memoryDatePicker;
     private ImageView imageView;
     private Button addImageButton;
+
+    private static final int REQUEST_PERMISSION_CODE = 100;
     private Button saveMemoryButton;
 
     private ArrayList<Uri> imageUris;
@@ -107,21 +119,17 @@ public class EditMemoryFragment extends Fragment {
                     throw new RuntimeException(e);
                 }
 
-
                 Calendar calendar = Calendar.getInstance();
                 calendar.setTime(date);
                 memoryDatePicker.updateDate(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
 
-                memoryDatePicker.updateDate(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
-
                 List<String> imageUrisAsString = memory.getImageUris();
-                if (imageUrisAsString != null && !imageUrisAsString.isEmpty()) {
+                if (imageUrisAsString != null && ! imageUrisAsString.isEmpty()) {
                     for (String uriString : imageUrisAsString) {
                         imageUris.add(Uri.parse(uriString));
                     }
                     imageAdapter.notifyDataSetChanged();
                 }
-
                 if (!imageUris.isEmpty()) {
                     Glide.with(requireContext()).load(imageUris.get(0)).into((ImageView) requireView().findViewById(R.id.memory_image_view));
                 } else {
@@ -135,36 +143,52 @@ public class EditMemoryFragment extends Fragment {
                 requireActivity().onBackPressed();
             }
         });
-
-
     }
 
 
     private void openImagePicker() {
-        Intent intent = new Intent(Intent.ACTION_PICK);
-        intent.setType("image/*");
-        startActivityForResult(intent, PICK_IMAGE);
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_PERMISSION_CODE);
+        } else {
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            startActivityForResult(intent, PICK_IMAGE);
+        }
     }
 
-    /**
-     * Handle the result of selecting an image from the image picker
-     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == REQUEST_PERMISSION_CODE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            openImagePicker();
+        } else {
+            Toast.makeText(requireContext(), "Permission denied", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == PICK_IMAGE && resultCode == requireActivity().RESULT_OK && data != null && data.getData() != null) {
-            Uri imageUri = data.getData();
-            try {
-                Bitmap bitmap = MediaStore.Images.Media.getBitmap(requireActivity().getContentResolver(), imageUri);
-                imageUris.add(imageUri);
-                imageAdapter.notifyDataSetChanged();
-            } catch (IOException e) {
-                e.printStackTrace();
-                Toast.makeText(requireContext(), "Failed to load the image", Toast.LENGTH_SHORT).show();
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_PERMISSION_CODE);
+            } else {
+                Uri imageUri = data.getData();
+                try {
+                    Bitmap bitmap = MediaStore.Images.Media.getBitmap(requireActivity().getContentResolver(), imageUri);
+                    imageUris.add(imageUri);
+                    imageAdapter.notifyDataSetChanged();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Toast.makeText(requireContext(), "Failed to load the image", Toast.LENGTH_SHORT).show();
+                }
             }
         }
     }
+
+
 
     /**
      * Update the memory with the user input
@@ -190,6 +214,12 @@ public class EditMemoryFragment extends Fragment {
             Toast.makeText(requireContext(), "Please select a date in the past or today", Toast.LENGTH_SHORT).show();
             return false;
         }
+        long dobInMillis = getDoBInMillis();
+
+        if (selectedDate.getTimeInMillis() < dobInMillis) {
+            Toast.makeText(requireContext(), "Please select a date after your Date of Birth", Toast.LENGTH_SHORT).show();
+            return false;
+        }
         // Update memory in the database
         Memory memory = new Memory(title, description, date);
         memory.setId(memoryId);
@@ -202,7 +232,20 @@ public class EditMemoryFragment extends Fragment {
         }
     }
 
+    private long getDoBInMillis() {
+        SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
+        String dobStr = sharedPreferences.getString("dob", "1900-01-01");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        dateFormat.setLenient(false);
 
-
+        try {
+            Date parsedDate = dateFormat.parse(dobStr);
+            return parsedDate.getTime();
+        } catch (ParseException e) {
+            Log.e(TAG, "Error parsing DoB", e);
+            return -1;
+        }
+    }
 
 }
+

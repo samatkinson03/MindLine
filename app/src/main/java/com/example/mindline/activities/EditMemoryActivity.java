@@ -12,11 +12,13 @@ import com.example.mindline.fragments.EditMemoryFragment;
 
 public class EditMemoryActivity extends AppCompatActivity {
 
+
+
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_memory);
-
         // Get memoryId from the Intent
         long memoryId = getIntent().getLongExtra("memory_id", -1);
 
@@ -32,4 +34,6 @@ public class EditMemoryActivity extends AppCompatActivity {
         fragmentTransaction.replace(R.id.edit_memory_container, editMemoryFragment);
         fragmentTransaction.commit();
     }
+
+
 }

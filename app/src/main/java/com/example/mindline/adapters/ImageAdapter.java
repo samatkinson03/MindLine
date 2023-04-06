@@ -1,25 +1,33 @@
 package com.example.mindline.adapters;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.ImageDecoder;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.Build;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.mindline.R;
-import com.github.chrisbanes.photoview.PhotoView;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 
 public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> {
+
     private Context context;
     private ArrayList<Uri> imageUris;
     private OnImageRemoveListener onImageRemoveListener;
+
     private boolean enableDelete;
 
     public ImageAdapter(Context context, ArrayList<Uri> imageUris, OnImageRemoveListener onImageRemoveListener, boolean enableDelete) {
@@ -28,12 +36,12 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         this.onImageRemoveListener = onImageRemoveListener;
         this.enableDelete = enableDelete;
     }
-
     public ImageAdapter(Context context, ArrayList<Uri> imageUris) {
         this.context = context;
         this.imageUris = imageUris;
         this.onImageRemoveListener = null;
     }
+
 
     @NonNull
     @Override
@@ -46,11 +54,19 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Uri imageUri = imageUris.get(position);
         try {
-            InputStream inputStream = context.getContentResolver().openInputStream(imageUri);
-            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-            holder.photoView.setImageBitmap(bitmap);
-            if (inputStream != null) {
-                inputStream.close();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                ImageDecoder.Source source = ImageDecoder.createSource(context.getContentResolver(), imageUri);
+                context.grantUriPermission(context.getPackageName(), imageUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+                Drawable drawable = ImageDecoder.decodeDrawable(source);
+                holder.imageView.setImageDrawable(drawable);
+            } else {
+                InputStream inputStream = context.getContentResolver().openInputStream(imageUri);
+                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+                holder.imageView.setImageBitmap(bitmap);
+                if (inputStream != null) {
+                    inputStream.close();
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -63,12 +79,12 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        PhotoView photoView;
+        ImageView imageView;
         ImageView deleteImageView;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            photoView = itemView.findViewById(R.id.image_view);
+            imageView = itemView.findViewById(R.id.image_view);
             deleteImageView = itemView.findViewById(R.id.delete_image_view);
             if (enableDelete) {
                 deleteImageView.setOnClickListener(v -> {
@@ -82,7 +98,6 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
             }
         }
     }
-
     public interface OnImageRemoveListener {
         void onImageRemove(int position);
     }

@@ -26,26 +26,23 @@ public class DateOfBirthActivity extends AppCompatActivity {
         final DatePicker datePicker = findViewById(R.id.datePicker);
         Button saveButton = findViewById(R.id.saveButton);
 
-        saveButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                int day = datePicker.getDayOfMonth();
-                int month = datePicker.getMonth();
-                int year = datePicker.getYear();
+        saveButton.setOnClickListener(view -> {
+            int day = datePicker.getDayOfMonth();
+            int month = datePicker.getMonth();
+            int year = datePicker.getYear();
 
-                Calendar calendar = Calendar.getInstance();
-                calendar.set(year, month, day);
-                long dateOfBirthInMillis = calendar.getTimeInMillis();
+            Calendar calendar = Calendar.getInstance();
+            calendar.set(year, month, day);
+            long dateOfBirthInMillis = calendar.getTimeInMillis();
 
-                // Save date of birth to SharedPreferences
-                SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                SharedPreferences.Editor editor = sharedPreferences.edit();
-                editor.putLong(DOB_KEY, dateOfBirthInMillis);
-                editor.apply();
+            // Save date of birth to SharedPreferences
+            SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putLong(DOB_KEY, dateOfBirthInMillis);
+            editor.apply();
 
-                // Proceed to the main app
-                startApp();
-            }
+            // Proceed to the main app
+            startApp();
         });
     }
 

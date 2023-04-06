@@ -1,9 +1,9 @@
 package com.example.mindline.fragments;
 
-import static android.service.controls.ControlsProviderService.TAG;
-
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -31,6 +31,7 @@ import com.example.mindline.R;
 import com.example.mindline.adapters.ImageAdapter;
 import com.example.mindline.models.Memory;
 import com.example.mindline.models.MemoryViewModel;
+import com.example.mindline.utils.ImageUtils;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -65,7 +66,6 @@ public class AddMemoryFragment extends Fragment {
         navController = NavHostFragment.findNavController(this);
         memoryTitleEditText = view.findViewById(R.id.memory_title_edit_text);
         memoryDescriptionEditText = view.findViewById(R.id.memory_description_edit_text);
-//        memoryDateEditText = view.findViewById(R.id.memory_date_edit_text);
         ImageButton backButton = view.findViewById(R.id.back_button);
         Button saveButton = view.findViewById(R.id.save_memory_button);
 
@@ -91,8 +91,12 @@ public class AddMemoryFragment extends Fragment {
         }
 
         long selectedDateInMillis = getDateInMillis(dateStr);
+        long dobInMillis = getDoBInMillis();
         if (selectedDateInMillis > System.currentTimeMillis()) {
             Toast.makeText(requireContext(), "Please select a date in the past or today", Toast.LENGTH_SHORT).show();
+            return;
+        } else if (selectedDateInMillis < dobInMillis) {
+            Toast.makeText(requireContext(), "Please select a date after your Date of Birth", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -100,61 +104,10 @@ public class AddMemoryFragment extends Fragment {
         List<String> imageUrisAsString = imageUris.stream().map(Uri::toString).collect(Collectors.toList());
         memory.setImageUris(new ArrayList<>(imageUrisAsString));
 
+        // Persist the images to Google Photos
+        GooglePhotosUtils.persistImagesToGooglePhotos(requireContext(), imageUris, title, description);
+
         memoryViewModel.insert(memory);
         NavController navController = Navigation.findNavController(requireView());
         navController.popBackStack();
     }
-
-
-    private void openImagePicker() {
-        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        startActivityForResult(intent, PICK_IMAGE_REQUEST);
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
-            if (data.getClipData() != null) {
-                int count = data.getClipData().getItemCount();
-                for (int i = 0; i < count; i++) {
-                    Uri imageUri = data.getClipData().getItemAt(i).getUri();
-                    imageUris.add(imageUri);
-                }
-            } else if (data.getData() != null) {
-                Uri imageUri = data.getData();
-                imageUris.add(imageUri);
-            }
-            displaySelectedImages();
-        }
-    }
-
-    private void displaySelectedImages() {
-        RecyclerView imageRecyclerView = getView().findViewById(R.id.selected_images_recycler_view);
-        final ImageAdapter[] imageAdapterHolder = new ImageAdapter[1];
-        imageAdapterHolder[0] = new ImageAdapter(requireContext(), imageUris, position -> {
-            imageUris.remove(position);
-            imageAdapterHolder[0].notifyItemRemoved(position);
-        }, false);
-
-        imageRecyclerView.setAdapter(imageAdapterHolder[0]);
-        imageRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
-    }
-
-    private long getDateInMillis(String date) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
-        dateFormat.setLenient(false);
-
-        try {
-            Date parsedDate = dateFormat.parse(date);
-            return parsedDate.getTime();
-        } catch (ParseException e) {
-            Log.e(TAG, "Error parsing date", e);
-            return -1;
-        }
-    }
-
-
-}
