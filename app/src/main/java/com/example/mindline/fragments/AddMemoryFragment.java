@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class AddMemoryFragment extends Fragment {
@@ -108,17 +109,28 @@ public class AddMemoryFragment extends Fragment {
             Toast.makeText(requireContext(), "Please select a date after your Date of Birth", Toast.LENGTH_SHORT).show();
             return;
         }
-
-        Memory memory = new Memory(title, description, dateStr);
+        String albumId = UUID.randomUUID().toString();
+        Memory memory = new Memory(title, description, dateStr, albumId);
         List<String> imageUrisAsString = imageUris.stream().map(Uri::toString).collect(Collectors.toList());
         memory.setImageUris(new ArrayList<>(imageUrisAsString));
 
-        // Persist the images to Google Photos
-        GooglePhotosUtils.persistImagesToGooglePhotos(requireContext(), imageUris, title, description);
+        // Fetch the access token from SharedPreferences
+        String accessToken = getAccessToken();
+        if (accessToken != null) {
+            // Persist the images to Google Photos
+            GooglePhotosUtils.persistImagesToGooglePhotos(requireContext(), accessToken, imageUris, title, description, albumId);
+        } else {
+            // Handle the case where the access token is missing
+        }
 
         memoryViewModel.insert(memory);
         NavController navController = Navigation.findNavController(requireView());
         navController.popBackStack();
+    }
+
+    private String getAccessToken() {
+        SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
+        return sharedPreferences.getString("access_token", null);
     }
 
 
@@ -188,6 +200,4 @@ public class AddMemoryFragment extends Fragment {
             return -1;
         }
     }
-
-
 }

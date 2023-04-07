@@ -35,6 +35,7 @@ import com.example.mindline.R;
 import com.example.mindline.adapters.ImageAdapter;
 import com.example.mindline.models.Memory;
 import com.example.mindline.models.MemoryViewModel;
+import com.example.mindline.utils.GooglePhotosUtils;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -44,6 +45,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 public class EditMemoryFragment extends Fragment {
     private static final int PICK_IMAGE = 1;
@@ -62,6 +64,7 @@ public class EditMemoryFragment extends Fragment {
     private MemoryViewModel memoryViewModel;
 
     private long memoryId;
+    private String albumId;
 
     public EditMemoryFragment() {
         // Required empty public constructor
@@ -109,7 +112,7 @@ public class EditMemoryFragment extends Fragment {
             if (memory != null) {
                 memoryTitle.setText(memory.getTitle());
                 memoryDescription.setText(memory.getDescription());
-
+                albumId = memory.getAlbumId();
                 String dateString = memory.getDate(); // Assuming dateString is in the format of "yyyy-MM-dd"
                 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
                 Date date;
@@ -123,13 +126,22 @@ public class EditMemoryFragment extends Fragment {
                 calendar.setTime(date);
                 memoryDatePicker.updateDate(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
 
-                List<String> imageUrisAsString = memory.getImageUris();
-                if (imageUrisAsString != null && ! imageUrisAsString.isEmpty()) {
-                    for (String uriString : imageUrisAsString) {
-                        imageUris.add(Uri.parse(uriString));
-                    }
-                    imageAdapter.notifyDataSetChanged();
+                String accessToken = getAccessToken();
+                if (accessToken != null) {
+                    GooglePhotosUtils.getImagesFromGooglePhotos(requireContext(), accessToken, memory.getAlbumId(), mediaItems -> {
+                        List<Uri> imageUrisFromGoogle = mediaItems.stream()
+                                .filter(mediaItem -> imageUris.contains(mediaItem.id))
+                                .map(mediaItem -> Uri.parse(mediaItem.baseUrl))
+                                .collect(Collectors.toList());
+
+                        imageUris.clear();
+                        imageUris.addAll(imageUrisFromGoogle);
+                        imageAdapter.notifyDataSetChanged();
+                    });
+                } else {
+                    // Handle the case where the access token is missing
                 }
+
                 if (!imageUris.isEmpty()) {
                     Glide.with(requireContext()).load(imageUris.get(0)).into((ImageView) requireView().findViewById(R.id.memory_image_view));
                 } else {
@@ -143,6 +155,10 @@ public class EditMemoryFragment extends Fragment {
                 requireActivity().onBackPressed();
             }
         });
+    }
+    private String getAccessToken() {
+        SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
+        return sharedPreferences.getString("access_token", null);
     }
 
 
@@ -188,12 +204,15 @@ public class EditMemoryFragment extends Fragment {
         }
     }
 
-
-
     /**
      * Update the memory with the user input
      */
     private boolean updateMemory() {
+        Memory fetchedMemory = memoryViewModel.getMemoryById(memoryId).getValue();
+        if (fetchedMemory == null) {
+            return false;
+        }
+
         // Retrieve user input
         String title = memoryTitle.getText().toString();
         String description = memoryDescription.getText().toString();
@@ -221,7 +240,7 @@ public class EditMemoryFragment extends Fragment {
             return false;
         }
         // Update memory in the database
-        Memory memory = new Memory(title, description, date);
+        Memory memory = new Memory(title, description, date, fetchedMemory.getAlbumId()); // Use the albumId from the fetched memory
         memory.setId(memoryId);
         memory.setImageUris(imageAdapter.getImageUris());
         int rowsUpdated = memoryViewModel.updateMemory(memory);
@@ -231,6 +250,7 @@ public class EditMemoryFragment extends Fragment {
             return false;
         }
     }
+
 
     private long getDoBInMillis() {
         SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
@@ -246,6 +266,5 @@ public class EditMemoryFragment extends Fragment {
             return -1;
         }
     }
-
 }
 

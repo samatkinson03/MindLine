@@ -2,7 +2,9 @@ package com.example.mindline.fragments;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -25,9 +27,11 @@ import com.example.mindline.activities.EditMemoryActivity;
 import com.example.mindline.adapters.ImageAdapter;
 import com.example.mindline.models.Memory;
 import com.example.mindline.models.MemoryViewModel;
+import com.example.mindline.utils.GooglePhotosUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class MemoryDetailFragment extends Fragment {
 
@@ -92,22 +96,51 @@ public class MemoryDetailFragment extends Fragment {
                 memoryDescriptionTextView.setText(memory.getDescription());
             }
 
-            List<Uri> imageUris = new ArrayList<>();
-            for (String uriString : memory.getImageUris()) {
-                imageUris.add(Uri.parse(uriString));
-            }
+            List<String> imageUris = new ArrayList<>(memory.getImageUris());
 
             if (!imageUris.isEmpty()) {
                 memoryImagesLabel.setVisibility(View.VISIBLE);
                 memoryImagesRecyclerView.setVisibility(View.VISIBLE);
                 memoryImagesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
-                memoryImagesRecyclerView.setAdapter(new ImageAdapter(requireContext(), (ArrayList<Uri>) imageUris, position -> {
-                    Uri selectedImageUri = imageUris.get(position);
-                    showImageInFullScreen(selectedImageUri);
-                }, false));
+
+                List<Uri> imageUrisToDisplay = new ArrayList<>();
+
+                // Add local image Uris to list of image Uris to display
+                for (String imageUriString : imageUris) {
+                    Uri imageUri = Uri.parse(imageUriString);
+                    if (GooglePhotosUtils.isLocalFileUri(requireContext(), imageUri)) {
+                        imageUrisToDisplay.add(imageUri);
+                    }
+                }
+
+                // Add image Uris from Google Photos to list of image Uris to display
+                String accessToken = getAccessToken();
+                if (accessToken != null) {
+                    GooglePhotosUtils.getImagesFromGooglePhotos(requireContext(), accessToken, memory.getAlbumId(), mediaItems -> {
+                        List<Uri> imageUrisFromGoogle = mediaItems.stream()
+                                .filter(mediaItem -> imageUris.contains(mediaItem.id))
+                                .map(mediaItem -> Uri.parse(mediaItem.baseUrl))
+                                .collect(Collectors.toList());
+                        imageUrisToDisplay.addAll(imageUrisFromGoogle);
+
+                        // Set the adapter with imageUrisToDisplay
+                        ImageAdapter memoryImagesAdapter = new ImageAdapter(requireContext(), (ArrayList<Uri>) imageUrisToDisplay);
+                        memoryImagesRecyclerView.setAdapter(memoryImagesAdapter);
+                    });
+                } else {
+                    // Handle the case where the access token is missing
+                }
             }
         }
     }
+
+
+
+    private String getAccessToken() {
+        SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
+        return sharedPreferences.getString("access_token", null);
+    }
+
 
     private void showImageInFullScreen(Uri imageUri) {
         Dialog fullScreenImageDialog = new Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen);
@@ -132,18 +165,13 @@ public class MemoryDetailFragment extends Fragment {
 
     private void deleteMemory() {
         if (getContext() != null) {
-            new AlertDialog.Builder(getContext())
-                    .setTitle(R.string.delete_memory)
-                    .setMessage(R.string.delete_memory_confirmation)
-                    .setPositiveButton(R.string.yes, (dialog, which) -> {
-                        if (getArguments() != null) {
-                            long memoryId = getArguments().getLong("memory_id");
-                            memoryViewModel.deleteMemoryById(memoryId);
-                            requireActivity().onBackPressed();
-                        }
-                    })
-                    .setNegativeButton(R.string.no, null)
-                    .show();
+            new AlertDialog.Builder(getContext()).setTitle(R.string.delete_memory).setMessage(R.string.delete_memory_confirmation).setPositiveButton(R.string.yes, (dialog, which) -> {
+                if (getArguments() != null) {
+                    long memoryId = getArguments().getLong("memory_id");
+                    memoryViewModel.deleteMemoryById(memoryId);
+                    requireActivity().onBackPressed();
+                }
+            }).setNegativeButton(R.string.no, null).show();
         }
 
     }

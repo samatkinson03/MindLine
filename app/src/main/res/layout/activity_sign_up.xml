@@ -29,23 +29,20 @@
             android:layout_below="@+id/sign_up_title"
             android:layout_marginTop="32dp" />
 
-        <DatePicker
-            android:id="@+id/date_picker"
+        <include
+            layout="@layout/activity_date_picker"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:calendarViewShown="false"
-            android:datePickerMode="spinner"
-            android:spinnersShown="true"
             android:layout_below="@+id/date_of_birth_text_view"
             android:layout_marginTop="8dp" />
-
 
         <com.google.android.gms.common.SignInButton
             android:id="@+id/google_sign_in_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/date_picker"
-            android:layout_centerHorizontal="true" />
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="32dp" />
 
     </RelativeLayout>
 </ScrollView>
