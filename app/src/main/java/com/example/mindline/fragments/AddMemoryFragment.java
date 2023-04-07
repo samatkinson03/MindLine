@@ -1,5 +1,7 @@
 package com.example.mindline.fragments;
 
+import static android.service.controls.ControlsProviderService.TAG;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -31,8 +33,9 @@ import com.example.mindline.R;
 import com.example.mindline.adapters.ImageAdapter;
 import com.example.mindline.models.Memory;
 import com.example.mindline.models.MemoryViewModel;
-import com.example.mindline.utils.ImageUtils;
+import com.example.mindline.utils.GooglePhotosUtils;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -70,13 +73,19 @@ public class AddMemoryFragment extends Fragment {
         Button saveButton = view.findViewById(R.id.save_memory_button);
 
         backButton.setOnClickListener(v -> Navigation.findNavController(v).popBackStack());
-        saveButton.setOnClickListener(v -> saveMemory());
+        saveButton.setOnClickListener(v -> {
+            try {
+                saveMemory();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
         ImageButton addImageButton = view.findViewById(R.id.add_image_button);
         addImageButton.setOnClickListener(v -> openImagePicker());
 
     }
 
-    private void saveMemory() {
+    private void saveMemory() throws IOException {
         String title = memoryTitleEditText.getText().toString().trim();
         String description = memoryDescriptionEditText.getText().toString().trim();
         DatePicker datePicker = getView().findViewById(R.id.memory_date_picker);
@@ -111,3 +120,74 @@ public class AddMemoryFragment extends Fragment {
         NavController navController = Navigation.findNavController(requireView());
         navController.popBackStack();
     }
+
+
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
+            if (data.getClipData() != null) {
+                int count = data.getClipData().getItemCount();
+                for (int i = 0; i < count; i++) {
+                    Uri imageUri = data.getClipData().getItemAt(i).getUri();
+                    imageUris.add(imageUri);
+                }
+            } else if (data.getData() != null) {
+                Uri imageUri = data.getData();
+                imageUris.add(imageUri);
+            }
+            displaySelectedImages();
+        }
+    }
+
+    private void openImagePicker() {
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); // Add this line
+        startActivityForResult(intent, PICK_IMAGE_REQUEST);
+    }
+
+    private void displaySelectedImages() {
+        RecyclerView imageRecyclerView = getView().findViewById(R.id.selected_images_recycler_view);
+        final ImageAdapter[] imageAdapterHolder = new ImageAdapter[1];
+        imageAdapterHolder[0] = new ImageAdapter(requireContext(), imageUris, position -> {
+            imageUris.remove(position);
+            imageAdapterHolder[0].notifyItemRemoved(position);
+        }, false);
+
+        imageRecyclerView.setAdapter(imageAdapterHolder[0]);
+        imageRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
+    }
+
+    private long getDateInMillis(String date) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        dateFormat.setLenient(false);
+
+        try {
+            Date parsedDate = dateFormat.parse(date);
+            return parsedDate.getTime();
+        } catch (ParseException e) {
+            Log.e(TAG, "Error parsing date", e);
+            return -1;
+        }
+    }
+
+    private long getDoBInMillis() {
+        SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
+        String dobStr = sharedPreferences.getString("dob", "1900-01-01");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        dateFormat.setLenient(false);
+
+        try {
+            Date parsedDate = dateFormat.parse(dobStr);
+            return parsedDate.getTime();
+        } catch (ParseException e) {
+            Log.e(TAG, "Error parsing DoB", e);
+            return -1;
+        }
+    }
+
+
+}
