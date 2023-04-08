@@ -109,4 +109,9 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         }
         return imageUrisAsString;
     }
+
+    public void updateImageUris(ArrayList<Uri> imageUris) {
+        this.imageUris = imageUris;
+        notifyDataSetChanged();
+    }
 }

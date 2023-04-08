@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -86,10 +87,11 @@ public class MemoryDetailFragment extends Fragment {
     }
 
     private void displayMemoryDetails(Memory memory) {
+        Log.d("test", "this is being ran");
         if (memory != null) {
             memoryTitleTextView.setText(memory.getTitle());
             memoryDateTextView.setText(memory.getDate());
-
+            Log.d("test", "this is also being ran");
             if (!memory.getDescription().isEmpty()) {
                 memoryDescriptionLabel.setVisibility(View.VISIBLE);
                 memoryDescriptionTextView.setVisibility(View.VISIBLE);
@@ -97,46 +99,74 @@ public class MemoryDetailFragment extends Fragment {
             }
 
             List<String> imageUris = new ArrayList<>(memory.getImageUris());
-
-            if (!imageUris.isEmpty()) {
-                memoryImagesLabel.setVisibility(View.VISIBLE);
-                memoryImagesRecyclerView.setVisibility(View.VISIBLE);
-                memoryImagesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
-
-                List<Uri> imageUrisToDisplay = new ArrayList<>();
-
-                // Add local image Uris to list of image Uris to display
-                for (String imageUriString : imageUris) {
-                    Uri imageUri = Uri.parse(imageUriString);
-                    if (GooglePhotosUtils.isLocalFileUri(requireContext(), imageUri)) {
-                        imageUrisToDisplay.add(imageUri);
-                    }
+            List<Uri> imageUrisToDisplay = new ArrayList<>();
+            System.out.println("Image URIs from Memory: " + imageUris);
+            // Add local image Uris to list of image Uris to display
+            for (String imageUriString : imageUris) {
+                Uri imageUri = Uri.parse(imageUriString);
+                System.out.println("Checking URI: " + imageUri);
+                if (GooglePhotosUtils.isLocalFileUri(requireContext(), imageUri)) {
+                    System.out.println("Adding URI: " + imageUri);
+                    imageUrisToDisplay.add(imageUri);
+                    System.out.printf("URI should be in list: ", imageUrisToDisplay.size());
                 }
+            }
+            Log.d("Uh oh", "Number of images retrieved from database: " + imageUrisToDisplay.size());
 
-                // Add image Uris from Google Photos to list of image Uris to display
-                String accessToken = getAccessToken();
-                if (accessToken != null) {
-                    GooglePhotosUtils.getImagesFromGooglePhotos(requireContext(), accessToken, memory.getAlbumId(), mediaItems -> {
-                        List<Uri> imageUrisFromGoogle = mediaItems.stream()
-                                .filter(mediaItem -> imageUris.contains(mediaItem.id))
-                                .map(mediaItem -> Uri.parse(mediaItem.baseUrl))
-                                .collect(Collectors.toList());
-                        imageUrisToDisplay.addAll(imageUrisFromGoogle);
+            // Initialize the adapter with local images (if any)
+            setupMemoryImagesAdapter(imageUrisToDisplay);
 
-                        // Set the adapter with imageUrisToDisplay
-                        ImageAdapter memoryImagesAdapter = new ImageAdapter(requireContext(), (ArrayList<Uri>) imageUrisToDisplay);
-                        memoryImagesRecyclerView.setAdapter(memoryImagesAdapter);
-                    });
-                } else {
-                    // Handle the case where the access token is missing
-                }
+            // Add image Uris from Google Photos to list of image Uris to display
+            String accessToken = getAccessToken();
+            if (accessToken != null) {
+                System.out.println("access token isnt null");
+                GooglePhotosUtils.getImagesFromGooglePhotos(requireContext(), accessToken, memory.getAlbumId(), mediaItems -> {
+                    List<Uri> imageUrisFromGoogle = mediaItems.stream()
+                            .filter(mediaItem -> imageUris.contains(mediaItem.id))
+                            .map(mediaItem -> Uri.parse(mediaItem.baseUrl))
+                            .collect(Collectors.toList());
+                    System.out.println(imageUrisFromGoogle);
+                    imageUrisToDisplay.addAll(imageUrisFromGoogle);
+                    System.out.println(imageUrisToDisplay.size());
+                    // Update the adapter with local images and Google Photos images
+                    updateMemoryImagesAdapter(imageUrisToDisplay);
+                });
+            } else {
+                // Handle the case where the access token is missing
+            }
+        }
+    }
+
+    private void updateMemoryImagesAdapter(List<Uri> imageUris) {
+        if (imageUris != null && !imageUris.isEmpty()) {
+            memoryImagesLabel.setVisibility(View.VISIBLE);
+            memoryImagesRecyclerView.setVisibility(View.VISIBLE);
+            ImageAdapter memoryImagesAdapter = (ImageAdapter) memoryImagesRecyclerView.getAdapter();
+            if (memoryImagesAdapter != null) {
+                memoryImagesAdapter.updateImageUris((ArrayList<Uri>) imageUris);
+            } else {
+                setupMemoryImagesAdapter(imageUris);
             }
         }
     }
 
 
+    private void setupMemoryImagesAdapter(List<Uri> imageUris) {
+        if (imageUris != null && !imageUris.isEmpty()) {
+            memoryImagesLabel.setVisibility(View.VISIBLE);
+            memoryImagesRecyclerView.setVisibility(View.VISIBLE);
+            memoryImagesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
+
+            ImageAdapter memoryImagesAdapter = new ImageAdapter(requireContext(), (ArrayList<Uri>) imageUris);
+            memoryImagesRecyclerView.setAdapter(memoryImagesAdapter);
+        }
+    }
+
+
+
 
     private String getAccessToken() {
+        System.out.println("ayo");
         SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
         return sharedPreferences.getString("access_token", null);
     }

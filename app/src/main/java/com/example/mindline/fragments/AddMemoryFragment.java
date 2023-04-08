@@ -3,6 +3,7 @@ package com.example.mindline.fragments;
 import static android.service.controls.ControlsProviderService.TAG;
 
 import android.app.Activity;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -53,8 +54,11 @@ public class AddMemoryFragment extends Fragment {
 
     private NavController navController;
 
+
+
     private static final int PICK_IMAGE_REQUEST = 1;
     private ArrayList<Uri> imageUris = new ArrayList<>();
+
 
     @Nullable
     @Override
@@ -87,6 +91,7 @@ public class AddMemoryFragment extends Fragment {
     }
 
     private void saveMemory() throws IOException {
+        System.out.println("1");
         String title = memoryTitleEditText.getText().toString().trim();
         String description = memoryDescriptionEditText.getText().toString().trim();
         DatePicker datePicker = getView().findViewById(R.id.memory_date_picker);
@@ -113,13 +118,15 @@ public class AddMemoryFragment extends Fragment {
         Memory memory = new Memory(title, description, dateStr, albumId);
         List<String> imageUrisAsString = imageUris.stream().map(Uri::toString).collect(Collectors.toList());
         memory.setImageUris(new ArrayList<>(imageUrisAsString));
-
+        System.out.println(imageUrisAsString);
         // Fetch the access token from SharedPreferences
         String accessToken = getAccessToken();
         if (accessToken != null) {
+            System.out.println("yeah man");
             // Persist the images to Google Photos
             GooglePhotosUtils.persistImagesToGooglePhotos(requireContext(), accessToken, imageUris, title, description, albumId);
         } else {
+            System.out.println("uh oh");
             // Handle the case where the access token is missing
         }
 
@@ -129,6 +136,7 @@ public class AddMemoryFragment extends Fragment {
     }
 
     private String getAccessToken() {
+        System.out.println("wahoo");
         SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
         return sharedPreferences.getString("access_token", null);
     }
@@ -140,14 +148,19 @@ public class AddMemoryFragment extends Fragment {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
-            if (data.getClipData() != null) {
-                int count = data.getClipData().getItemCount();
+            ClipData clipData = data.getClipData();
+            if (clipData != null) {
+                int count = clipData.getItemCount();
                 for (int i = 0; i < count; i++) {
-                    Uri imageUri = data.getClipData().getItemAt(i).getUri();
+                    Uri imageUri = clipData.getItemAt(i).getUri();
+                    int takeFlags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    requireContext().getContentResolver().takePersistableUriPermission(imageUri, takeFlags);
                     imageUris.add(imageUri);
                 }
             } else if (data.getData() != null) {
                 Uri imageUri = data.getData();
+                int takeFlags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                requireContext().getContentResolver().takePersistableUriPermission(imageUri, takeFlags);
                 imageUris.add(imageUri);
             }
             displaySelectedImages();
@@ -155,9 +168,12 @@ public class AddMemoryFragment extends Fragment {
     }
 
     private void openImagePicker() {
-        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); // Add this line
         startActivityForResult(intent, PICK_IMAGE_REQUEST);
     }
 

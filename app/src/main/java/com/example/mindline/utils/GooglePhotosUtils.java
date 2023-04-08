@@ -129,7 +129,6 @@ public class GooglePhotosUtils {
             for (NewMediaItemResult result : response.getNewMediaItemResultsList()) {
                 Status status = result.getStatus();
                 if (status.getCode() == Code.OK_VALUE) {
-                    com.google.photos.types.proto.MediaItem createdItem = result.getMediaItem();
                 } else {
                     // Handle error
                 }
