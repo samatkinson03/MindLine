@@ -44,18 +44,18 @@ public class GooglePhotosUtils {
     private static final String TAG = "GooglePhotosUtils";
 
 
-    public static void getImagesFromGooglePhotos(Context context, String accessToken, String albumId, OnImagesFetchedListener listener) {
+    public static void getImagesFromGooglePhotos(Context context, String accessToken, List<String> imageUriStrings, OnImagesFetchedListener listener) {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         Future<List<MediaItem>> future = executorService.submit(() -> {
             HttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
-            GoogleCredentials credential = getUserCredentials(context, accessToken);
+            GoogleCredentials credential = getUserCredentials(accessToken);
             HttpRequestFactory requestFactory = httpTransport.createRequestFactory((HttpRequestInitializer) credential);
             List<MediaItem> mediaItems = new ArrayList<>();
             try {
                 String nextPageToken = "";
                 while (true) {
                     String url = "https://photoslibrary.googleapis.com/v1/mediaItems:search";
-                    HttpRequest request = requestFactory.buildPostRequest(new GenericUrl(url), ByteArrayContent.fromString("application/json", "{" + "\"albumId\":\"" + albumId + "\"," + "\"pageSize\":50," + "\"pageToken\":\"" + nextPageToken + "\"" + "}"));
+                    HttpRequest request = requestFactory.buildPostRequest(new GenericUrl(url), ByteArrayContent.fromString("application/json", "{" + "\"pageSize\":50," + "\"pageToken\":\"" + nextPageToken + "\"" + "}"));
                     HttpResponse response = request.execute();
 
                     String responseBody = response.parseAsString();
@@ -96,7 +96,7 @@ public class GooglePhotosUtils {
 
     public static void persistImagesToGooglePhotos(Context context, String accessToken, ArrayList<Uri> imageUris, String albumId, String title, String description) throws IOException {
         // Set up the Photos Library Client
-        PhotosLibrarySettings settings = PhotosLibrarySettings.newBuilder().setCredentialsProvider(() -> getUserCredentials(context, accessToken)).build();
+        PhotosLibrarySettings settings = PhotosLibrarySettings.newBuilder().setCredentialsProvider(() -> getUserCredentials(accessToken)).build();
 
         try (PhotosLibraryClient photosLibraryClient = PhotosLibraryClient.initialize(settings)) {
             List<String> uploadTokens = new ArrayList<>();
@@ -151,7 +151,7 @@ public class GooglePhotosUtils {
     }
 
 
-    private static GoogleCredentials getUserCredentials(Context context, String accessToken) {
+    private static GoogleCredentials getUserCredentials(String accessToken) {
         return GoogleCredentials.create(new AccessToken(accessToken, null));
     }
 

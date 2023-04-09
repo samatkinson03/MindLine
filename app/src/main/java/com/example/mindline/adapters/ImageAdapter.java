@@ -102,6 +102,10 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         void onImageRemove(int position);
     }
 
+    public void setImageUris(ArrayList<Uri> newImageUris) {
+        this.imageUris = newImageUris;
+    }
+
     public ArrayList<String> getImageUris() {
         ArrayList<String> imageUrisAsString = new ArrayList<>();
         for (Uri uri : imageUris) {

@@ -1,17 +1,13 @@
 package com.example.mindline.fragments;
 
 import android.app.AlertDialog;
-import android.app.Dialog;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -22,15 +18,20 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
 import com.example.mindline.R;
 import com.example.mindline.activities.EditMemoryActivity;
 import com.example.mindline.adapters.ImageAdapter;
 import com.example.mindline.models.Memory;
 import com.example.mindline.models.MemoryViewModel;
 import com.example.mindline.utils.GooglePhotosUtils;
+import com.google.android.gms.auth.GoogleAuthException;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -44,6 +45,9 @@ public class MemoryDetailFragment extends Fragment {
     private RecyclerView memoryImagesRecyclerView;
     private MemoryViewModel memoryViewModel;
 
+    private List<Uri> imageUris;
+    private List<String> imageUriStrings;
+    private List<Uri> imageUrisToDisplay;
 
     public MemoryDetailFragment() {
         // Required empty public constructor
@@ -80,6 +84,7 @@ public class MemoryDetailFragment extends Fragment {
             }
             return false;
         });
+
         if (getArguments() != null) {
             long memoryId = getArguments().getLong("memory_id");
             memoryViewModel.getMemoryById(memoryId).observe(getViewLifecycleOwner(), this::displayMemoryDetails);
@@ -87,47 +92,63 @@ public class MemoryDetailFragment extends Fragment {
     }
 
     private void displayMemoryDetails(Memory memory) {
-        Log.d("test", "this is being ran");
         if (memory != null) {
             memoryTitleTextView.setText(memory.getTitle());
             memoryDateTextView.setText(memory.getDate());
-            Log.d("test", "this is also being ran");
+
             if (!memory.getDescription().isEmpty()) {
                 memoryDescriptionLabel.setVisibility(View.VISIBLE);
                 memoryDescriptionTextView.setVisibility(View.VISIBLE);
                 memoryDescriptionTextView.setText(memory.getDescription());
             }
 
-            List<String> imageUris = new ArrayList<>(memory.getImageUris());
-            List<Uri> imageUrisToDisplay = new ArrayList<>();
-            System.out.println("Image URIs from Memory: " + imageUris);
+            imageUriStrings = new ArrayList<>(memory.getImageUris());
+            imageUris = new ArrayList<>();
+            imageUrisToDisplay = new ArrayList<>();
+
             // Add local image Uris to list of image Uris to display
-            for (String imageUriString : imageUris) {
+            for (String imageUriString : imageUriStrings) {
                 Uri imageUri = Uri.parse(imageUriString);
-                System.out.println("Checking URI: " + imageUri);
                 if (GooglePhotosUtils.isLocalFileUri(requireContext(), imageUri)) {
-                    System.out.println("Adding URI: " + imageUri);
-                    imageUrisToDisplay.add(imageUri);
-                    System.out.printf("URI should be in list: ", imageUrisToDisplay.size());
+                    imageUris.add(imageUri);
                 }
             }
-            Log.d("Uh oh", "Number of images retrieved from database: " + imageUrisToDisplay.size());
 
             // Initialize the adapter with local images (if any)
-            setupMemoryImagesAdapter(imageUrisToDisplay);
+            setupMemoryImagesAdapter(imageUris);
 
             // Add image Uris from Google Photos to list of image Uris to display
-            String accessToken = getAccessToken();
+            GoogleSignInAccount googleSignInAccount = GoogleSignIn.getLastSignedInAccount(requireActivity());
+            if (googleSignInAccount != null) {
+                GoogleAccountCredential credential = GoogleAccountCredential.usingOAuth2(requireContext(), Collections.singleton("https://www.googleapis.com/auth/photoslibrary"));
+                credential.setSelectedAccount(googleSignInAccount.getAccount());
+                new GetAccessTokenTask().execute(credential);
+            }
+        }
+    }
+
+    private class GetAccessTokenTask extends AsyncTask<GoogleAccountCredential, Void, String> {
+        @Override
+        protected String doInBackground(GoogleAccountCredential... credentials) {
+            try {
+                return credentials[0].getToken();
+            } catch (IOException | GoogleAuthException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String accessToken) {
             if (accessToken != null) {
-                System.out.println("access token isnt null");
-                GooglePhotosUtils.getImagesFromGooglePhotos(requireContext(), accessToken, memory.getAlbumId(), mediaItems -> {
+                // Code that uses the access token for Google Photos API calls
+                GooglePhotosUtils.getImagesFromGooglePhotos(requireContext(), accessToken, imageUriStrings, mediaItems -> {
                     List<Uri> imageUrisFromGoogle = mediaItems.stream()
-                            .filter(mediaItem -> imageUris.contains(mediaItem.id))
+                            .filter(mediaItem -> imageUriStrings.contains(mediaItem.id))
                             .map(mediaItem -> Uri.parse(mediaItem.baseUrl))
                             .collect(Collectors.toList());
-                    System.out.println(imageUrisFromGoogle);
                     imageUrisToDisplay.addAll(imageUrisFromGoogle);
-                    System.out.println(imageUrisToDisplay.size());
+
                     // Update the adapter with local images and Google Photos images
                     updateMemoryImagesAdapter(imageUrisToDisplay);
                 });
@@ -150,7 +171,6 @@ public class MemoryDetailFragment extends Fragment {
         }
     }
 
-
     private void setupMemoryImagesAdapter(List<Uri> imageUris) {
         if (imageUris != null && !imageUris.isEmpty()) {
             memoryImagesLabel.setVisibility(View.VISIBLE);
@@ -160,28 +180,6 @@ public class MemoryDetailFragment extends Fragment {
             ImageAdapter memoryImagesAdapter = new ImageAdapter(requireContext(), (ArrayList<Uri>) imageUris);
             memoryImagesRecyclerView.setAdapter(memoryImagesAdapter);
         }
-    }
-
-
-
-
-    private String getAccessToken() {
-        System.out.println("ayo");
-        SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
-        return sharedPreferences.getString("access_token", null);
-    }
-
-
-    private void showImageInFullScreen(Uri imageUri) {
-        Dialog fullScreenImageDialog = new Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen);
-        fullScreenImageDialog.setContentView(R.layout.full_screen_image_dialog);
-
-        ImageView fullScreenImageView = fullScreenImageDialog.findViewById(R.id.full_screen_image_view);
-        Glide.with(requireContext()).load(imageUri).into(fullScreenImageView);
-
-        fullScreenImageView.setOnClickListener(v -> fullScreenImageDialog.dismiss());
-
-        fullScreenImageDialog.show();
     }
 
     private void editMemory() {
@@ -203,6 +201,7 @@ public class MemoryDetailFragment extends Fragment {
                 }
             }).setNegativeButton(R.string.no, null).show();
         }
-
     }
+
 }
+

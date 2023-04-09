@@ -1,16 +1,12 @@
 package com.example.mindline.fragments;
 
-import static android.service.controls.ControlsProviderService.TAG;
-
-import android.Manifest;
+import android.app.Activity;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,48 +19,41 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
 import com.example.mindline.R;
 import com.example.mindline.adapters.ImageAdapter;
 import com.example.mindline.models.Memory;
 import com.example.mindline.models.MemoryViewModel;
-import com.example.mindline.utils.GooglePhotosUtils;
 
-import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
 public class EditMemoryFragment extends Fragment {
     private static final int PICK_IMAGE = 1;
-
     private EditText memoryTitle;
     private EditText memoryDescription;
     private DatePicker memoryDatePicker;
     private ImageView imageView;
     private Button addImageButton;
-
     private static final int REQUEST_PERMISSION_CODE = 100;
     private Button saveMemoryButton;
-
     private ArrayList<Uri> imageUris;
     private ImageAdapter imageAdapter;
     private MemoryViewModel memoryViewModel;
-
     private long memoryId;
     private String albumId;
+
+    private static final String TAG = "EditMemoryFragment";
+
 
     public EditMemoryFragment() {
         // Required empty public constructor
@@ -106,7 +95,13 @@ public class EditMemoryFragment extends Fragment {
         selectedImagesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         selectedImagesRecyclerView.setAdapter(imageAdapter);
 
-        addImageButton.setOnClickListener(v -> openImagePicker());
+        addImageButton.setOnClickListener(v -> {
+            Intent intent = new Intent();
+            intent.setType("image/*");
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
+            startActivityForResult(Intent.createChooser(intent, "Select Images"), PICK_IMAGE);
+        });
 
         memoryViewModel.getMemoryById(memoryId).observe(getViewLifecycleOwner(), memory -> {
             if (memory != null) {
@@ -114,7 +109,7 @@ public class EditMemoryFragment extends Fragment {
                 memoryDescription.setText(memory.getDescription());
                 albumId = memory.getAlbumId();
                 String dateString = memory.getDate(); // Assuming dateString is in the format of "yyyy-MM-dd"
-                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
                 Date date;
                 try {
                     date = dateFormat.parse(dateString);
@@ -126,26 +121,10 @@ public class EditMemoryFragment extends Fragment {
                 calendar.setTime(date);
                 memoryDatePicker.updateDate(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
 
-                String accessToken = getAccessToken();
-                if (accessToken != null) {
-                    GooglePhotosUtils.getImagesFromGooglePhotos(requireContext(), accessToken, memory.getAlbumId(), mediaItems -> {
-                        List<Uri> imageUrisFromGoogle = mediaItems.stream()
-                                .filter(mediaItem -> imageUris.contains(mediaItem.id))
-                                .map(mediaItem -> Uri.parse(mediaItem.baseUrl))
-                                .collect(Collectors.toList());
-
-                        imageUris.clear();
-                        imageUris.addAll(imageUrisFromGoogle);
-                        imageAdapter.notifyDataSetChanged();
-                    });
-                } else {
-                    // Handle the case where the access token is missing
-                }
-
-                if (!imageUris.isEmpty()) {
-                    Glide.with(requireContext()).load(imageUris.get(0)).into((ImageView) requireView().findViewById(R.id.memory_image_view));
-                } else {
-                    requireView().findViewById(R.id.memory_image_view).setVisibility(View.GONE);
+                if (memory.getImageUris() != null && !memory.getImageUris().isEmpty()) {
+                    imageUris.clear();
+                    imageUris.addAll(memory.getImageUris().stream().map(Uri::parse).collect(Collectors.toList()));
+                    displaySelectedImages();
                 }
             }
         });
@@ -156,70 +135,43 @@ public class EditMemoryFragment extends Fragment {
             }
         });
     }
-    private String getAccessToken() {
-        SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
-        return sharedPreferences.getString("access_token", null);
-    }
-
-
-    private void openImagePicker() {
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_PERMISSION_CODE);
-        } else {
-            Intent intent = new Intent(Intent.ACTION_PICK);
-            intent.setType("image/*");
-            startActivityForResult(intent, PICK_IMAGE);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == REQUEST_PERMISSION_CODE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            openImagePicker();
-        } else {
-            Toast.makeText(requireContext(), "Permission denied", Toast.LENGTH_SHORT).show();
-        }
-    }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == PICK_IMAGE && resultCode == requireActivity().RESULT_OK && data != null && data.getData() != null) {
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_PERMISSION_CODE);
-            } else {
-                Uri imageUri = data.getData();
-                try {
-                    Bitmap bitmap = MediaStore.Images.Media.getBitmap(requireActivity().getContentResolver(), imageUri);
+        if (requestCode == PICK_IMAGE && resultCode == Activity.RESULT_OK && data != null) {
+            if (data.getClipData() != null) {
+                ClipData clipData = data.getClipData();
+                for (int i = 0; i < clipData.getItemCount(); i++) {
+                    Uri imageUri = clipData.getItemAt(i).getUri();
                     imageUris.add(imageUri);
-                    imageAdapter.notifyDataSetChanged();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Toast.makeText(requireContext(), "Failed to load the image", Toast.LENGTH_SHORT).show();
                 }
+            } else if (data.getData() != null) {
+                Uri imageUri = data.getData();
+                imageUris.add(imageUri);
             }
+            displaySelectedImages(); // Update the RecyclerView with the new images
         }
     }
 
-    /**
-     * Update the memory with the user input
-     */
+    private void displaySelectedImages() {
+        imageAdapter.updateImageUris(imageUris);
+        imageAdapter.notifyDataSetChanged();
+    }
+
+
     private boolean updateMemory() {
         Memory fetchedMemory = memoryViewModel.getMemoryById(memoryId).getValue();
         if (fetchedMemory == null) {
             return false;
         }
-
         // Retrieve user input
         String title = memoryTitle.getText().toString();
         String description = memoryDescription.getText().toString();
         int day = memoryDatePicker.getDayOfMonth();
         int month = memoryDatePicker.getMonth();
         int year = memoryDatePicker.getYear();
-
         // Validate input
         if (title.isEmpty() || description.isEmpty()) {
             Toast.makeText(requireContext(), "Please fill in all fields", Toast.LENGTH_SHORT).show();
@@ -240,17 +192,18 @@ public class EditMemoryFragment extends Fragment {
             return false;
         }
         // Update memory in the database
-        Memory memory = new Memory(title, description, date, fetchedMemory.getAlbumId()); // Use the albumId from the fetched memory
+        Memory memory = new Memory(title, description, date, fetchedMemory.getAlbumId());
         memory.setId(memoryId);
-        memory.setImageUris(imageAdapter.getImageUris());
+        memory.setImageUris(new ArrayList<>(imageUris.stream().map(Uri::toString).collect(Collectors.toList()))); // Convert Uris to Strings
         int rowsUpdated = memoryViewModel.updateMemory(memory);
         if (rowsUpdated > 0) {
+            Toast.makeText(requireContext(), "Memory updated successfully", Toast.LENGTH_SHORT).show();
             return true;
         } else {
+            Toast.makeText(requireContext(), "Failed to update the memory", Toast.LENGTH_SHORT).show();
             return false;
         }
     }
-
 
     private long getDoBInMillis() {
         SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
@@ -267,4 +220,3 @@ public class EditMemoryFragment extends Fragment {
         }
     }
 }
-

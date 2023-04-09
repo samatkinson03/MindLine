@@ -1,7 +1,5 @@
 package com.example.mindline.fragments;
 
-import static android.service.controls.ControlsProviderService.TAG;
-
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.Context;
@@ -9,8 +7,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,9 +20,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
-import androidx.navigation.fragment.NavHostFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -35,11 +28,14 @@ import com.example.mindline.adapters.ImageAdapter;
 import com.example.mindline.models.Memory;
 import com.example.mindline.models.MemoryViewModel;
 import com.example.mindline.utils.GooglePhotosUtils;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -49,16 +45,13 @@ import java.util.stream.Collectors;
 public class AddMemoryFragment extends Fragment {
 
     private MemoryViewModel memoryViewModel;
-    private EditText memoryTitleEditText;
-    private EditText memoryDescriptionEditText;
-
-    private NavController navController;
-
-
-
-    private static final int PICK_IMAGE_REQUEST = 1;
+    private EditText titleEditText;
+    private EditText descriptionEditText;
+    private DatePicker dateTextView;
+    private RecyclerView selectedImagesRecyclerView;
+    private ImageAdapter imageAdapter;
     private ArrayList<Uri> imageUris = new ArrayList<>();
-
+    private static final int PICK_IMAGE_REQUEST = 1;
 
     @Nullable
     @Override
@@ -69,36 +62,51 @@ public class AddMemoryFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        memoryViewModel = new ViewModelProvider(this).get(MemoryViewModel.class);
 
-        memoryViewModel = new ViewModelProvider(requireActivity()).get(MemoryViewModel.class);
-        navController = NavHostFragment.findNavController(this);
-        memoryTitleEditText = view.findViewById(R.id.memory_title_edit_text);
-        memoryDescriptionEditText = view.findViewById(R.id.memory_description_edit_text);
-        ImageButton backButton = view.findViewById(R.id.back_button);
-        Button saveButton = view.findViewById(R.id.save_memory_button);
+        titleEditText = view.findViewById(R.id.memory_title_edit_text);
+        descriptionEditText = view.findViewById(R.id.memory_description_edit_text);
+        dateTextView = view.findViewById(R.id.memory_date_picker);
+        Button addMemoryButton = view.findViewById(R.id.save_memory_button);
+        ImageButton addPhotosButton = view.findViewById(R.id.add_image_button);
 
-        backButton.setOnClickListener(v -> Navigation.findNavController(v).popBackStack());
-        saveButton.setOnClickListener(v -> {
+        addMemoryButton.setOnClickListener(v -> {
             try {
-                saveMemory();
+                addMemory();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         });
-        ImageButton addImageButton = view.findViewById(R.id.add_image_button);
-        addImageButton.setOnClickListener(v -> openImagePicker());
 
+        selectedImagesRecyclerView = view.findViewById(R.id.selected_images_recycler_view);
+        selectedImagesRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
+        imageAdapter = new ImageAdapter(getContext(), imageUris, position -> {
+            imageUris.remove(position);
+            imageAdapter.updateImageUris(imageUris);
+        }, true);
+        selectedImagesRecyclerView.setAdapter(imageAdapter);
+        addPhotosButton.setOnClickListener(v -> openImagePicker());
+
+        dateTextView.init(Calendar.getInstance().get(Calendar.YEAR), Calendar.getInstance().get(Calendar.MONTH), Calendar.getInstance().get(Calendar.DAY_OF_MONTH), (datePicker, year, month, day) -> {
+            String dateStr = String.format(Locale.getDefault(), "%04d-%02d-%02d", year, month + 1, day);
+            // Save the formatted date in the tag of the DatePicker
+            dateTextView.setTag(dateStr);
+        });
+        dateTextView.setTag(String.format(Locale.getDefault(), "%04d-%02d-%02d", Calendar.getInstance().get(Calendar.YEAR), Calendar.getInstance().get(Calendar.MONTH) + 1, Calendar.getInstance().get(Calendar.DAY_OF_MONTH)));
     }
 
-    private void saveMemory() throws IOException {
-        System.out.println("1");
-        String title = memoryTitleEditText.getText().toString().trim();
-        String description = memoryDescriptionEditText.getText().toString().trim();
-        DatePicker datePicker = getView().findViewById(R.id.memory_date_picker);
-        int day = datePicker.getDayOfMonth();
-        int month = datePicker.getMonth() + 1; // DatePicker months are 0-indexed
-        int year = datePicker.getYear();
-        String dateStr = String.format(Locale.getDefault(), "%04d-%02d-%02d", year, month, day);
+    private void openImagePicker() {
+        Intent intent = new Intent();
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
+        startActivityForResult(Intent.createChooser(intent, "Select Images"), PICK_IMAGE_REQUEST);
+    }
+
+    private void addMemory() throws IOException {
+        String title = titleEditText.getText().toString();
+        String description = descriptionEditText.getText().toString();
+        String dateStr = (String) dateTextView.getTag();
 
         if (title.isEmpty() || description.isEmpty()) {
             Toast.makeText(requireContext(), "Please fill all fields", Toast.LENGTH_SHORT).show();
@@ -114,106 +122,63 @@ public class AddMemoryFragment extends Fragment {
             Toast.makeText(requireContext(), "Please select a date after your Date of Birth", Toast.LENGTH_SHORT).show();
             return;
         }
+
         String albumId = UUID.randomUUID().toString();
         Memory memory = new Memory(title, description, dateStr, albumId);
         List<String> imageUrisAsString = imageUris.stream().map(Uri::toString).collect(Collectors.toList());
         memory.setImageUris(new ArrayList<>(imageUrisAsString));
-        System.out.println(imageUrisAsString);
-        // Fetch the access token from SharedPreferences
-        String accessToken = getAccessToken();
-        if (accessToken != null) {
-            System.out.println("yeah man");
-            // Persist the images to Google Photos
-            GooglePhotosUtils.persistImagesToGooglePhotos(requireContext(), accessToken, imageUris, title, description, albumId);
-        } else {
-            System.out.println("uh oh");
-            // Handle the case where the access token is missing
+
+        // Get the GoogleSignInAccount instance
+        GoogleSignInAccount googleSignInAccount = GoogleSignIn.getLastSignedInAccount(requireContext());
+        if (googleSignInAccount == null) {
+            Toast.makeText(requireContext(), "Unable to access Google Photos. Please sign in again.", Toast.LENGTH_SHORT).show();
+            return;
         }
 
         memoryViewModel.insert(memory);
-        NavController navController = Navigation.findNavController(requireView());
-        navController.popBackStack();
+        Toast.makeText(requireContext(), "Memory added successfully", Toast.LENGTH_SHORT).show();
+
+        // Navigate back to the previous fragment
+        if (getActivity() != null) {
+            getActivity().onBackPressed();
+        }
     }
-
-    private String getAccessToken() {
-        System.out.println("wahoo");
-        SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
-        return sharedPreferences.getString("access_token", null);
-    }
-
-
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
-            ClipData clipData = data.getClipData();
-            if (clipData != null) {
-                int count = clipData.getItemCount();
-                for (int i = 0; i < count; i++) {
+            if (data.getClipData() != null) {
+                ClipData clipData = data.getClipData();
+                for (int i = 0; i < clipData.getItemCount(); i++) {
                     Uri imageUri = clipData.getItemAt(i).getUri();
-                    int takeFlags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                    requireContext().getContentResolver().takePersistableUriPermission(imageUri, takeFlags);
                     imageUris.add(imageUri);
                 }
             } else if (data.getData() != null) {
                 Uri imageUri = data.getData();
-                int takeFlags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                requireContext().getContentResolver().takePersistableUriPermission(imageUri, takeFlags);
                 imageUris.add(imageUri);
             }
-            displaySelectedImages();
+            imageAdapter.updateImageUris(imageUris); // Update the RecyclerView with the new images
         }
     }
 
-    private void openImagePicker() {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("image/*");
-        intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        startActivityForResult(intent, PICK_IMAGE_REQUEST);
-    }
-
-    private void displaySelectedImages() {
-        RecyclerView imageRecyclerView = getView().findViewById(R.id.selected_images_recycler_view);
-        final ImageAdapter[] imageAdapterHolder = new ImageAdapter[1];
-        imageAdapterHolder[0] = new ImageAdapter(requireContext(), imageUris, position -> {
-            imageUris.remove(position);
-            imageAdapterHolder[0].notifyItemRemoved(position);
-        }, false);
-
-        imageRecyclerView.setAdapter(imageAdapterHolder[0]);
-        imageRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
-    }
-
-    private long getDateInMillis(String date) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        dateFormat.setLenient(false);
-
+    private long getDateInMillis(String dateStr) {
         try {
-            Date parsedDate = dateFormat.parse(date);
-            return parsedDate.getTime();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            Date date = sdf.parse(dateStr);
+            if (date != null) {
+                return date.getTime();
+            }
         } catch (ParseException e) {
-            Log.e(TAG, "Error parsing date", e);
-            return -1;
+            e.printStackTrace();
         }
+        return 0;
     }
 
     private long getDoBInMillis() {
-        SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
-        String dobStr = sharedPreferences.getString("dob", "1900-01-01");
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        dateFormat.setLenient(false);
-
-        try {
-            Date parsedDate = dateFormat.parse(dobStr);
-            return parsedDate.getTime();
-        } catch (ParseException e) {
-            Log.e(TAG, "Error parsing DoB", e);
-            return -1;
-        }
+        SharedPreferences sharedPreferences = requireContext().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
+        return sharedPreferences.getLong("date_of_birth", 0);
     }
 }
+
