@@ -16,6 +16,8 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -95,13 +97,13 @@ public class AddMemoryFragment extends Fragment {
         dateTextView.setTag(String.format(Locale.getDefault(), "%04d-%02d-%02d", Calendar.getInstance().get(Calendar.YEAR), Calendar.getInstance().get(Calendar.MONTH) + 1, Calendar.getInstance().get(Calendar.DAY_OF_MONTH)));
     }
 
-    private void openImagePicker() {
-        Intent intent = new Intent();
-        intent.setType("image/*");
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
-        startActivityForResult(Intent.createChooser(intent, "Select Images"), PICK_IMAGE_REQUEST);
-    }
+//    private void openImagePicker() {
+//        Intent intent = new Intent();
+//        intent.setType("image/*");
+//        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+//        intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
+//        startActivityForResult(Intent.createChooser(intent, "Select Images"), PICK_IMAGE_REQUEST);
+//    }
 
     private void addMemory() throws IOException {
         String title = titleEditText.getText().toString();
@@ -144,24 +146,58 @@ public class AddMemoryFragment extends Fragment {
         }
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
-            if (data.getClipData() != null) {
-                ClipData clipData = data.getClipData();
-                for (int i = 0; i < clipData.getItemCount(); i++) {
-                    Uri imageUri = clipData.getItemAt(i).getUri();
-                    imageUris.add(imageUri);
+    private ActivityResultLauncher<Intent> imagePickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    handleImagePickerResult(result.getData());
                 }
-            } else if (data.getData() != null) {
-                Uri imageUri = data.getData();
+            }
+    );
+
+    // ...
+
+    private void openImagePicker() {
+        Intent intent = new Intent();
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
+        imagePickerLauncher.launch(Intent.createChooser(intent, "Select Images"));
+    }
+
+    private void handleImagePickerResult(Intent data) {
+        if (data.getClipData() != null) {
+            ClipData clipData = data.getClipData();
+            for (int i = 0; i < clipData.getItemCount(); i++) {
+                Uri imageUri = clipData.getItemAt(i).getUri();
                 imageUris.add(imageUri);
             }
-            imageAdapter.updateImageUris(imageUris); // Update the RecyclerView with the new images
+        } else if (data.getData() != null) {
+            Uri imageUri = data.getData();
+            imageUris.add(imageUri);
         }
+        imageAdapter.updateImageUris(imageUris);
     }
+
+//    @Override
+//    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+//        super.onActivityResult(requestCode, resultCode, data);
+//
+//        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
+//            if (data.getClipData() != null) {
+//                ClipData clipData = data.getClipData();
+//                for (int i = 0; i < clipData.getItemCount(); i++) {
+//                    Uri imageUri = clipData.getItemAt(i).getUri();
+//                    imageUris.add(imageUri);
+//                }
+//            } else if (data.getData() != null) {
+//                Uri imageUri = data.getData();
+//                imageUris.add(imageUri);
+//            }
+//            imageAdapter.updateImageUris(imageUris); // Update the RecyclerView with the new images
+//        }
+//    }
 
     private long getDateInMillis(String dateStr) {
         try {

@@ -7,6 +7,9 @@ import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 import androidx.room.TypeConverters;
 
+//import com.example.mindline.converters.StringListConverter;
+//import com.example.mindline.converters.UriListConverter;
+
 import com.example.mindline.converters.StringListConverter;
 import com.example.mindline.converters.UriListConverter;
 
@@ -32,8 +35,8 @@ public class Memory {
     public Memory(long id, String title, String date, String description, String albumId, ArrayList<String> imageUris) {
         this.id = id;
         this.title = title;
-        this.date = date;
         this.description = description;
+        this.date = date;
         this.albumId = albumId; // Add this line
         this.imageUris = imageUris;
     }

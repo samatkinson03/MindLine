@@ -94,49 +94,49 @@ public class GooglePhotosUtils {
     }
 
 
-    public static void persistImagesToGooglePhotos(Context context, String accessToken, ArrayList<Uri> imageUris, String albumId, String title, String description) throws IOException {
-        // Set up the Photos Library Client
-        PhotosLibrarySettings settings = PhotosLibrarySettings.newBuilder().setCredentialsProvider(() -> getUserCredentials(accessToken)).build();
-
-        try (PhotosLibraryClient photosLibraryClient = PhotosLibraryClient.initialize(settings)) {
-            List<String> uploadTokens = new ArrayList<>();
-
-            // Step 1: Uploading bytes
-            for (Uri uri : imageUris) {
-                try (RandomAccessFile inputStream = new RandomAccessFile(new File(uri.getPath()), "r")) {
-                    String mimeType = context.getContentResolver().getType(uri);
-                    UploadMediaItemRequest uploadRequest = UploadMediaItemRequest.newBuilder().setMimeType(mimeType).setDataFile(inputStream).build();
-
-                    UploadMediaItemResponse uploadResponse = photosLibraryClient.uploadMediaItem(uploadRequest);
-                    if (uploadResponse.getError().isPresent()) {
-                        // Handle error
-                    } else {
-                        String uploadToken = uploadResponse.getUploadToken().get();
-                        uploadTokens.add(uploadToken);
-                    }
-                } catch (FileNotFoundException e) {
-                    // Handle error
-                } catch (IOException e) {
-                    // Handle error
-                }
-            }
-
-            // Step 2: Creating media items
-            List<NewMediaItem> newItems = uploadTokens.stream().map(uploadToken -> NewMediaItemFactory.createNewMediaItem(uploadToken, title, description)).collect(Collectors.toList());
-
-            BatchCreateMediaItemsResponse response = photosLibraryClient.batchCreateMediaItems(albumId, newItems);
-
-            for (NewMediaItemResult result : response.getNewMediaItemResultsList()) {
-                Status status = result.getStatus();
-                if (status.getCode() == Code.OK_VALUE) {
-                } else {
-                    // Handle error
-                }
-            }
-        } catch (IOException e) {
-            // Handle error
-        }
-    }
+//    public static void persistImagesToGooglePhotos(Context context, String accessToken, ArrayList<Uri> imageUris, String albumId, String title, String description) throws IOException {
+//        // Set up the Photos Library Client
+//        PhotosLibrarySettings settings = PhotosLibrarySettings.newBuilder().setCredentialsProvider(() -> getUserCredentials(accessToken)).build();
+//
+//        try (PhotosLibraryClient photosLibraryClient = PhotosLibraryClient.initialize(settings)) {
+//            List<String> uploadTokens = new ArrayList<>();
+//
+//            // Step 1: Uploading bytes
+//            for (Uri uri : imageUris) {
+//                try (RandomAccessFile inputStream = new RandomAccessFile(new File(uri.getPath()), "r")) {
+//                    String mimeType = context.getContentResolver().getType(uri);
+//                    UploadMediaItemRequest uploadRequest = UploadMediaItemRequest.newBuilder().setMimeType(mimeType).setDataFile(inputStream).build();
+//
+//                    UploadMediaItemResponse uploadResponse = photosLibraryClient.uploadMediaItem(uploadRequest);
+//                    if (uploadResponse.getError().isPresent()) {
+//                        // Handle error
+//                    } else {
+//                        String uploadToken = uploadResponse.getUploadToken().get();
+//                        uploadTokens.add(uploadToken);
+//                    }
+//                } catch (FileNotFoundException e) {
+//                    // Handle error
+//                } catch (IOException e) {
+//                    // Handle error
+//                }
+//            }
+//
+//            // Step 2: Creating media items
+//            List<NewMediaItem> newItems = uploadTokens.stream().map(uploadToken -> NewMediaItemFactory.createNewMediaItem(uploadToken, title, description)).collect(Collectors.toList());
+//
+//            BatchCreateMediaItemsResponse response = photosLibraryClient.batchCreateMediaItems(albumId, newItems);
+//
+//            for (NewMediaItemResult result : response.getNewMediaItemResultsList()) {
+//                Status status = result.getStatus();
+//                if (status.getCode() == Code.OK_VALUE) {
+//                } else {
+//                    // Handle error
+//                }
+//            }
+//        } catch (IOException e) {
+//            // Handle error
+//        }
+//    }
 
     public static boolean isLocalFileUri(Context context, Uri uri) {
         return ContentResolver.SCHEME_FILE.equals(uri.getScheme())

@@ -50,13 +50,5 @@ public class MemoryViewModel extends AndroidViewModel {
         return memoryDao.searchMemories("%" + query + "%");
     }
 
-    public LiveData<List<Memory>> getMemoriesSince(long timestamp) {
-        return memoryDao.getMemoriesSince(timestamp);
-    }
-
-
-
-
-    // Add other methods to interact with the database if needed
 }
 

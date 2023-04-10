@@ -7,7 +7,9 @@ import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 import androidx.room.Update;
+
 import com.example.mindline.models.Memory;
+
 import java.util.List;
 
 @Dao
@@ -16,8 +18,6 @@ public interface MemoryDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     void insert(Memory memory);
 
-    @Update
-    void update(Memory memory);
 
     @Delete
     void delete(Memory memory);
@@ -25,11 +25,6 @@ public interface MemoryDao {
     @Query("SELECT * FROM memory")
     LiveData<List<Memory>> getAllMemories();
 
-    @Query("SELECT * FROM memory WHERE date BETWEEN :startDate AND :endDate")
-    LiveData<List<Memory>> getMemoriesByDateRange(String startDate, String endDate);
-
-//    @Query("SELECT * FROM memory WHERE title LIKE :query OR description LIKE :query")
-//    LiveData<List<Memory>> searchMemories(String query);
 
     @Query("SELECT * FROM memory WHERE id = :id")
     LiveData<Memory> getMemoryById(long id);

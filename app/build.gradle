@@ -67,6 +67,8 @@ dependencies {
             force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.20'
         }
     }
+    implementation 'androidx.activity:activity:1.4.0'
+    implementation 'androidx.fragment:fragment:1.4.0'
     implementation 'com.google.photos.library:google-photos-library-client:1.7.2'
     implementation 'com.google.api-client:google-api-client:1.32.1'
     implementation 'com.google.auth:google-auth-library-oauth2-http:1.16.0'

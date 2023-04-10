@@ -13,7 +13,6 @@ import com.google.firebase.auth.FirebaseUser;
 
 public class MainActivity extends AppCompatActivity {
 
-    private FirebaseAuth mAuth;
     private static final String PREFS_NAME = "user_data";
     private static final String DOB_KEY = "date_of_birth";
 
@@ -22,13 +21,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         FirebaseApp.initializeApp(this);
-        mAuth = FirebaseAuth.getInstance();
-
-        // Check if the user is already signed in
+        FirebaseAuth firebaseAuth = FirebaseAuth.getInstance();
+        FirebaseUser currentUser = firebaseAuth.getCurrentUser();
+        // Check if the user already has a date of birth
         // If so, start the app
         SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        long dateOfBirthInMillis = sharedPreferences.getLong(DOB_KEY, -1);
-        if (dateOfBirthInMillis != -1) {
+        sharedPreferences.getLong(DOB_KEY, -1);
+        if (currentUser != null) {
             startApp();
         } else {
             Intent intent = new Intent(MainActivity.this, SignInActivity.class);

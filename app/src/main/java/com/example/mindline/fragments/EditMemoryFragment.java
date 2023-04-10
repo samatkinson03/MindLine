@@ -1,5 +1,6 @@
 package com.example.mindline.fragments;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.Context;
@@ -17,6 +18,8 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -38,22 +41,20 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 
 public class EditMemoryFragment extends Fragment {
-    private static final int PICK_IMAGE = 1;
+    private static final String TAG = "EditMemoryFragment";
+
     private EditText memoryTitle;
     private EditText memoryDescription;
     private DatePicker memoryDatePicker;
     private ImageView imageView;
     private Button addImageButton;
-    private static final int REQUEST_PERMISSION_CODE = 100;
     private Button saveMemoryButton;
+
+    private Memory observedMemory;
     private ArrayList<Uri> imageUris;
     private ImageAdapter imageAdapter;
     private MemoryViewModel memoryViewModel;
     private long memoryId;
-    private String albumId;
-
-    private static final String TAG = "EditMemoryFragment";
-
 
     public EditMemoryFragment() {
         // Required empty public constructor
@@ -64,6 +65,7 @@ public class EditMemoryFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             memoryId = getArguments().getLong("memory_id", -1);
+            System.out.println("this is the memoryid" + memoryId);
         }
     }
 
@@ -72,6 +74,23 @@ public class EditMemoryFragment extends Fragment {
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_edit_memory, container, false);
     }
+
+    private final ActivityResultLauncher<Intent> pickImageLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+        if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+            Intent data = result.getData();
+            if (data.getClipData() != null) {
+                ClipData clipData = data.getClipData();
+                for (int i = 0; i < clipData.getItemCount(); i++) {
+                    Uri imageUri = clipData.getItemAt(i).getUri();
+                    imageUris.add(imageUri);
+                }
+            } else if (data.getData() != null) {
+                Uri imageUri = data.getData();
+                imageUris.add(imageUri);
+            }
+            displaySelectedImages(); // Update the RecyclerView with the new images
+        }
+    });
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
@@ -94,21 +113,20 @@ public class EditMemoryFragment extends Fragment {
         RecyclerView selectedImagesRecyclerView = view.findViewById(R.id.selectedImagesRecyclerView);
         selectedImagesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         selectedImagesRecyclerView.setAdapter(imageAdapter);
-
         addImageButton.setOnClickListener(v -> {
             Intent intent = new Intent();
             intent.setType("image/*");
             intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
-            startActivityForResult(Intent.createChooser(intent, "Select Images"), PICK_IMAGE);
+            pickImageLauncher.launch(Intent.createChooser(intent, "Select Images"));
         });
 
         memoryViewModel.getMemoryById(memoryId).observe(getViewLifecycleOwner(), memory -> {
             if (memory != null) {
+                observedMemory = memory;
                 memoryTitle.setText(memory.getTitle());
                 memoryDescription.setText(memory.getDescription());
-                albumId = memory.getAlbumId();
-                String dateString = memory.getDate(); // Assuming dateString is in the format of "yyyy-MM-dd"
+                String dateString = memory.getDate();
                 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
                 Date date;
                 try {
@@ -136,51 +154,31 @@ public class EditMemoryFragment extends Fragment {
         });
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == PICK_IMAGE && resultCode == Activity.RESULT_OK && data != null) {
-            if (data.getClipData() != null) {
-                ClipData clipData = data.getClipData();
-                for (int i = 0; i < clipData.getItemCount(); i++) {
-                    Uri imageUri = clipData.getItemAt(i).getUri();
-                    imageUris.add(imageUri);
-                }
-            } else if (data.getData() != null) {
-                Uri imageUri = data.getData();
-                imageUris.add(imageUri);
-            }
-            displaySelectedImages(); // Update the RecyclerView with the new images
-        }
-    }
-
+    @SuppressLint("NotifyDataSetChanged")
     private void displaySelectedImages() {
         imageAdapter.updateImageUris(imageUris);
         imageAdapter.notifyDataSetChanged();
     }
 
-
     private boolean updateMemory() {
-        Memory fetchedMemory = memoryViewModel.getMemoryById(memoryId).getValue();
-        if (fetchedMemory == null) {
+        if (observedMemory == null) {
             return false;
         }
-        // Retrieve user input
         String title = memoryTitle.getText().toString();
         String description = memoryDescription.getText().toString();
         int day = memoryDatePicker.getDayOfMonth();
         int month = memoryDatePicker.getMonth();
         int year = memoryDatePicker.getYear();
-        // Validate input
+
         if (title.isEmpty() || description.isEmpty()) {
             Toast.makeText(requireContext(), "Please fill in all fields", Toast.LENGTH_SHORT).show();
             return false;
         }
-        String date = year + "-" + String.format("%02d", month + 1) + "-" + String.format("%02d", day);
+        @SuppressLint("DefaultLocale") String date = year + "-" + String.format("%02d", month + 1) + "-" + String.format("%02d", day);
         Calendar selectedDate = Calendar.getInstance();
         selectedDate.set(year, month, day);
         Calendar currentDate = Calendar.getInstance();
+
         if (selectedDate.after(currentDate)) {
             Toast.makeText(requireContext(), "Please select a date in the past or today", Toast.LENGTH_SHORT).show();
             return false;
@@ -191,19 +189,19 @@ public class EditMemoryFragment extends Fragment {
             Toast.makeText(requireContext(), "Please select a date after your Date of Birth", Toast.LENGTH_SHORT).show();
             return false;
         }
-        // Update memory in the database
-        Memory memory = new Memory(title, description, date, fetchedMemory.getAlbumId());
-        memory.setId(memoryId);
-        memory.setImageUris(new ArrayList<>(imageUris.stream().map(Uri::toString).collect(Collectors.toList()))); // Convert Uris to Strings
+        Memory memory = new Memory(observedMemory.getId(), title, date, description, observedMemory.getAlbumId(), new ArrayList<>(imageUris.stream().map(Uri::toString).collect(Collectors.toList())));
         int rowsUpdated = memoryViewModel.updateMemory(memory);
+
         if (rowsUpdated > 0) {
             Toast.makeText(requireContext(), "Memory updated successfully", Toast.LENGTH_SHORT).show();
+            requireActivity().onBackPressed();
             return true;
         } else {
             Toast.makeText(requireContext(), "Failed to update the memory", Toast.LENGTH_SHORT).show();
             return false;
         }
     }
+
 
     private long getDoBInMillis() {
         SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);

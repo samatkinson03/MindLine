@@ -1,20 +1,16 @@
 package com.example.mindline.activities;
 
 import android.os.Bundle;
-
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-
 import com.example.mindline.R;
 import com.example.mindline.fragments.EditMemoryFragment;
 
 public class EditMemoryActivity extends AppCompatActivity {
 
-
-
-
+    // onCreateMethod sets layout file and passes the id of a memory to the edit memory fragment using a bundle
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

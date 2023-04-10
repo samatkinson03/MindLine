@@ -9,6 +9,8 @@ import com.example.mindline.R;
 import com.example.mindline.fragments.SettingsFragment;
 
 public class SettingsActivity extends AppCompatActivity {
+
+    //Handles the usage of the settings fragment
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

@@ -6,6 +6,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mindline.R;
@@ -13,7 +15,6 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
-import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.Scope;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthCredential;
@@ -22,14 +23,13 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 
 public class SignInActivity extends AppCompatActivity {
-
-    private static final int RC_SIGN_IN = 9001;
-    private static final int REQUEST_CODE_PICK_DOB = 9002;
     private static final String PREFS_NAME = "user_data";
     private static final String DOB_KEY = "date_of_birth";
 
     private FirebaseAuth mAuth;
     private GoogleSignInClient mGoogleSignInClient;
+    private ActivityResultLauncher<Intent> signInActivityResultLauncher;
+    private ActivityResultLauncher<Intent> pickDobActivityResultLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +49,49 @@ public class SignInActivity extends AppCompatActivity {
         // Build a GoogleSignInClient with the options specified by gso.
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
+        // Register activity result launcher for Google Sign-In
+        signInActivityResultLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        Intent data = result.getData();
+                        if (data != null) {
+                            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+                            if (task.isSuccessful()) {
+                                GoogleSignInAccount account = task.getResult();
+                                if (account != null) {
+                                    handleSignInResult(account);
+                                }
+                            } else {
+                                Toast.makeText(this, "Google sign in failed.", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }
+                });
+
+        // Register activity result launcher for picking date of birth
+        pickDobActivityResultLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        Intent data = result.getData();
+                        if (data != null) {
+                            long dateOfBirthInMillis = data.getLongExtra("date_of_birth", -1);
+                            if (dateOfBirthInMillis != -1) {
+                                SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                                SharedPreferences.Editor editor = sharedPreferences.edit();
+                                editor.putLong(DOB_KEY, dateOfBirthInMillis);
+                                editor.apply();
+                            }
+                            startMainActivity();
+                        }
+                    }
+                });
+
+        // Link the sign-in button to the sign-in process.
+        com.google.android.gms.common.SignInButton signInButton = findViewById(R.id.google_sign_in_button);
+        signInButton.setOnClickListener(view -> signIn());
+
         // Check for existing Google Sign-In account, if the user is already signed in.
         GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
         if (account != null) {
@@ -62,34 +105,7 @@ public class SignInActivity extends AppCompatActivity {
 
     private void signIn() {
         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-        startActivityForResult(signInIntent, RC_SIGN_IN);
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        // Result returned from launching the Intent from GoogleSignInClient.getSignInIntent(...);
-        if (requestCode == RC_SIGN_IN) {
-            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            if (task.isSuccessful()) {
-                GoogleSignInAccount account = task.getResult();
-                if (account != null) {
-                    handleSignInResult(account);
-                }
-            } else {
-                Toast.makeText(this, "Google sign in failed.", Toast.LENGTH_SHORT).show();
-            }
-        } else if (requestCode == REQUEST_CODE_PICK_DOB && resultCode == RESULT_OK) {
-            long dateOfBirthInMillis = data.getLongExtra("date_of_birth", -1);
-            if (dateOfBirthInMillis != -1) {
-                SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                SharedPreferences.Editor editor = sharedPreferences.edit();
-                editor.putLong(DOB_KEY, dateOfBirthInMillis);
-                editor.apply();
-            }
-            startMainActivity();
-        }
+        signInActivityResultLauncher.launch(signInIntent);
     }
 
     private void handleSignInResult(GoogleSignInAccount account) {
@@ -122,7 +138,7 @@ public class SignInActivity extends AppCompatActivity {
 
     private void requestDateOfBirth() {
         Intent intent = new Intent(SignInActivity.this, DatePickerActivity.class);
-        startActivityForResult(intent, REQUEST_CODE_PICK_DOB);
+        pickDobActivityResultLauncher.launch(intent);
     }
 
     private void startMainActivity() {
@@ -136,3 +152,4 @@ public class SignInActivity extends AppCompatActivity {
         }
     }
 }
+
