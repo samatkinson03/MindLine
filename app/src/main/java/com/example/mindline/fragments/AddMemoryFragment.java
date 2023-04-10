@@ -97,13 +97,6 @@ public class AddMemoryFragment extends Fragment {
         dateTextView.setTag(String.format(Locale.getDefault(), "%04d-%02d-%02d", Calendar.getInstance().get(Calendar.YEAR), Calendar.getInstance().get(Calendar.MONTH) + 1, Calendar.getInstance().get(Calendar.DAY_OF_MONTH)));
     }
 
-//    private void openImagePicker() {
-//        Intent intent = new Intent();
-//        intent.setType("image/*");
-//        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-//        intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
-//        startActivityForResult(Intent.createChooser(intent, "Select Images"), PICK_IMAGE_REQUEST);
-//    }
 
     private void addMemory() throws IOException {
         String title = titleEditText.getText().toString();
@@ -117,10 +110,11 @@ public class AddMemoryFragment extends Fragment {
 
         long selectedDateInMillis = getDateInMillis(dateStr);
         long dobInMillis = getDoBInMillis();
+        System.out.println(dobInMillis);
         if (selectedDateInMillis > System.currentTimeMillis()) {
             Toast.makeText(requireContext(), "Please select a date in the past or today", Toast.LENGTH_SHORT).show();
             return;
-        } else if (selectedDateInMillis < dobInMillis) {
+        } else if (selectedDateInMillis <= dobInMillis) {
             Toast.makeText(requireContext(), "Please select a date after your Date of Birth", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -180,24 +174,6 @@ public class AddMemoryFragment extends Fragment {
         imageAdapter.updateImageUris(imageUris);
     }
 
-//    @Override
-//    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-//        super.onActivityResult(requestCode, resultCode, data);
-//
-//        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
-//            if (data.getClipData() != null) {
-//                ClipData clipData = data.getClipData();
-//                for (int i = 0; i < clipData.getItemCount(); i++) {
-//                    Uri imageUri = clipData.getItemAt(i).getUri();
-//                    imageUris.add(imageUri);
-//                }
-//            } else if (data.getData() != null) {
-//                Uri imageUri = data.getData();
-//                imageUris.add(imageUri);
-//            }
-//            imageAdapter.updateImageUris(imageUris); // Update the RecyclerView with the new images
-//        }
-//    }
 
     private long getDateInMillis(String dateStr) {
         try {
@@ -213,8 +189,16 @@ public class AddMemoryFragment extends Fragment {
     }
 
     private long getDoBInMillis() {
-        SharedPreferences sharedPreferences = requireContext().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
-        return sharedPreferences.getLong("date_of_birth", 0);
+        SharedPreferences sharedPreferences = requireContext().getSharedPreferences("user_data", Context.MODE_PRIVATE);
+        long dobInMillis = sharedPreferences.getLong("date_of_birth", -1);
+
+        if (dobInMillis == -1) {
+            Calendar calendar = Calendar.getInstance();
+            dobInMillis = calendar.getTimeInMillis();
+        }
+
+        return dobInMillis;
     }
+
 }
 

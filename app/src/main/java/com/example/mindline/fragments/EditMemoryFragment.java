@@ -184,7 +184,7 @@ public class EditMemoryFragment extends Fragment {
             return false;
         }
         long dobInMillis = getDoBInMillis();
-
+        System.out.println(dobInMillis);
         if (selectedDate.getTimeInMillis() < dobInMillis) {
             Toast.makeText(requireContext(), "Please select a date after your Date of Birth", Toast.LENGTH_SHORT).show();
             return false;
@@ -204,17 +204,14 @@ public class EditMemoryFragment extends Fragment {
 
 
     private long getDoBInMillis() {
-        SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("user_preferences", Context.MODE_PRIVATE);
-        String dobStr = sharedPreferences.getString("dob", "1900-01-01");
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        dateFormat.setLenient(false);
+        SharedPreferences sharedPreferences = requireContext().getSharedPreferences("user_data", Context.MODE_PRIVATE);
+        long dobInMillis = sharedPreferences.getLong("date_of_birth", -1);
 
-        try {
-            Date parsedDate = dateFormat.parse(dobStr);
-            return parsedDate.getTime();
-        } catch (ParseException e) {
-            Log.e(TAG, "Error parsing DoB", e);
-            return -1;
+        if (dobInMillis == -1) {
+            Calendar calendar = Calendar.getInstance();
+            dobInMillis = calendar.getTimeInMillis();
         }
+
+        return dobInMillis;
     }
 }

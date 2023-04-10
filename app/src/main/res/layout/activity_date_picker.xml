@@ -6,6 +6,18 @@
     android:layout_height="match_parent"
     tools:context=".activities.DatePickerActivity">
 
+    <TextView
+        android:id="@+id/welcome_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Welcome to MindLine! This app allows you to keep track of all those special moments throughout your life. To begin please enter your date of birth (this cannot be changed):"
+        android:textAlignment="center"
+        app:layout_constraintBottom_toTopOf="@+id/date_picker"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <DatePicker
         android:id="@+id/date_picker"
         android:layout_width="wrap_content"

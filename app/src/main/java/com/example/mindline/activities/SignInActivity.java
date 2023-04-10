@@ -2,6 +2,7 @@ package com.example.mindline.activities;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
@@ -21,6 +22,11 @@ import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
+import java.util.List;
 
 public class SignInActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "user_data";
@@ -95,13 +101,17 @@ public class SignInActivity extends AppCompatActivity {
         // Check for existing Google Sign-In account, if the user is already signed in.
         GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
         if (account != null) {
-            // Use the Photos Library API client library to obtain an access token.
-            handleSignInResult(account);
+            // If the user was previously logged in, sign the user out from GoogleSignInClient
+            mGoogleSignInClient.signOut().addOnCompleteListener(task -> {
+                // Use the Photos Library API client library to obtain an access token.
+                handleSignInResult(account);
+            });
         } else {
             // No existing Google Sign-In account, initiate the sign-in process.
             signIn();
         }
     }
+
 
     private void signIn() {
         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
@@ -111,6 +121,7 @@ public class SignInActivity extends AppCompatActivity {
     private void handleSignInResult(GoogleSignInAccount account) {
         // Proceed with Firebase authentication.
         firebaseAuthWithGoogle(account);
+
     }
 
     private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
@@ -135,6 +146,9 @@ public class SignInActivity extends AppCompatActivity {
                     }
                 });
     }
+
+
+
 
     private void requestDateOfBirth() {
         Intent intent = new Intent(SignInActivity.this, DatePickerActivity.class);
