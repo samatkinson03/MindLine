@@ -77,6 +77,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
             }
         } catch (IOException e) {
             e.printStackTrace();
+            holder.imageView.setImageResource(R.drawable.default_image);
         }
     }
 
