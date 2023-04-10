@@ -17,28 +17,13 @@ import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.google.photos.library.v1.PhotosLibraryClient;
-import com.google.photos.library.v1.PhotosLibrarySettings;
-import com.google.photos.library.v1.proto.BatchCreateMediaItemsResponse;
-import com.google.photos.library.v1.proto.NewMediaItem;
-import com.google.photos.library.v1.proto.NewMediaItemResult;
-import com.google.photos.library.v1.upload.UploadMediaItemRequest;
-import com.google.photos.library.v1.upload.UploadMediaItemResponse;
-import com.google.photos.library.v1.util.NewMediaItemFactory;
-import com.google.rpc.Code;
-import com.google.rpc.Status;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 public class GooglePhotosUtils {
     private static final String TAG = "GooglePhotosUtils";
@@ -94,50 +79,6 @@ public class GooglePhotosUtils {
     }
 
 
-//    public static void persistImagesToGooglePhotos(Context context, String accessToken, ArrayList<Uri> imageUris, String albumId, String title, String description) throws IOException {
-//        // Set up the Photos Library Client
-//        PhotosLibrarySettings settings = PhotosLibrarySettings.newBuilder().setCredentialsProvider(() -> getUserCredentials(accessToken)).build();
-//
-//        try (PhotosLibraryClient photosLibraryClient = PhotosLibraryClient.initialize(settings)) {
-//            List<String> uploadTokens = new ArrayList<>();
-//
-//            // Step 1: Uploading bytes
-//            for (Uri uri : imageUris) {
-//                try (RandomAccessFile inputStream = new RandomAccessFile(new File(uri.getPath()), "r")) {
-//                    String mimeType = context.getContentResolver().getType(uri);
-//                    UploadMediaItemRequest uploadRequest = UploadMediaItemRequest.newBuilder().setMimeType(mimeType).setDataFile(inputStream).build();
-//
-//                    UploadMediaItemResponse uploadResponse = photosLibraryClient.uploadMediaItem(uploadRequest);
-//                    if (uploadResponse.getError().isPresent()) {
-//                        // Handle error
-//                    } else {
-//                        String uploadToken = uploadResponse.getUploadToken().get();
-//                        uploadTokens.add(uploadToken);
-//                    }
-//                } catch (FileNotFoundException e) {
-//                    // Handle error
-//                } catch (IOException e) {
-//                    // Handle error
-//                }
-//            }
-//
-//            // Step 2: Creating media items
-//            List<NewMediaItem> newItems = uploadTokens.stream().map(uploadToken -> NewMediaItemFactory.createNewMediaItem(uploadToken, title, description)).collect(Collectors.toList());
-//
-//            BatchCreateMediaItemsResponse response = photosLibraryClient.batchCreateMediaItems(albumId, newItems);
-//
-//            for (NewMediaItemResult result : response.getNewMediaItemResultsList()) {
-//                Status status = result.getStatus();
-//                if (status.getCode() == Code.OK_VALUE) {
-//                } else {
-//                    // Handle error
-//                }
-//            }
-//        } catch (IOException e) {
-//            // Handle error
-//        }
-//    }
-
     public static boolean isLocalFileUri(Context context, Uri uri) {
         return ContentResolver.SCHEME_FILE.equals(uri.getScheme())
                 || (ContentResolver.SCHEME_CONTENT.equals(uri.getScheme())
@@ -145,16 +86,14 @@ public class GooglePhotosUtils {
                 && "com.android.providers.media.documents".equals(uri.getAuthority()));
     }
 
-
-    public interface OnImagesFetchedListener {
-        void onImagesFetched(List<MediaItem> mediaItems);
-    }
-
-
     private static GoogleCredentials getUserCredentials(String accessToken) {
         return GoogleCredentials.create(new AccessToken(accessToken, null));
     }
 
+
+    public interface OnImagesFetchedListener {
+        void onImagesFetched(List<MediaItem> mediaItems);
+    }
 
     public static class MediaItem {
         public String id;

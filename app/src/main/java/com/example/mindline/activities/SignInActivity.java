@@ -49,7 +49,7 @@ public class SignInActivity extends AppCompatActivity {
                 .requestEmail()
                 .requestIdToken(getString(R.string.default_web_client_id))
                 .requestServerAuthCode(getString(R.string.default_web_client_id), true) // Add "true" as the second parameter
-                .requestScopes(new Scope("https://www.googleapis.com/auth/photoslibrary"))
+                .requestScopes(new Scope("https://www.googleapis.com/auth/photoslibrary"), new Scope("https://www.googleapis.com/auth/photoslibrary.readonly"))
                 .build();
 
         // Build a GoogleSignInClient with the options specified by gso.
