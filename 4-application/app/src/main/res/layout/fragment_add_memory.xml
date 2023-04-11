@@ -11,7 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:src="@drawable/ic_arrow_back"
-        app:backgroundTint="@color/colorPrimary"
+        app:backgroundTint="@color/purple_500"
         app:tint="@color/white" />
 
     <EditText
@@ -49,7 +49,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/ic_add"
-            app:backgroundTint="@color/colorPrimary"
+            app:backgroundTint="@color/purple_500"
             app:tint="@color/white" />
 
         <TextView
@@ -57,7 +57,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:text="Add Image"
-            android:textColor="@color/colorPrimary"
+            android:textColor="@color/purple_500"
             android:textSize="18sp" />
 
     </LinearLayout>
