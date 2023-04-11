@@ -16,7 +16,6 @@ Functional Requirements:
 7 - Memory date validation checks (no future dates and not before user's birth).
 8 - Edit and delete options for memories, including image management.
 9 - Settings page with logout functionality.
-10 - Support for multiple user accounts with independent timelines and memories.
 
 Non-Functional Requirements:
 
