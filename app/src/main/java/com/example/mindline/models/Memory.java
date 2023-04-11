@@ -7,6 +7,9 @@ import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 import androidx.room.TypeConverters;
 
+//import com.example.mindline.converters.StringListConverter;
+//import com.example.mindline.converters.UriListConverter;
+
 import com.example.mindline.converters.StringListConverter;
 import com.example.mindline.converters.UriListConverter;
 
@@ -21,25 +24,28 @@ public class Memory {
     private String title;
     private String date;
     private String description;
+
+    private String albumId;
     @TypeConverters(UriListConverter.class)
     private List<Uri> images;
     @TypeConverters(StringListConverter.class)
     private ArrayList<String> imageUris;
 
     @Ignore
-    public Memory(long id, String title, String date, String description, List<Uri> images, ArrayList<String> imageUris) {
+    public Memory(long id, String title, String date, String description, String albumId, ArrayList<String> imageUris) {
         this.id = id;
         this.title = title;
-        this.date = date;
         this.description = description;
-        this.images = images;
+        this.date = date;
+        this.albumId = albumId; // Add this line
         this.imageUris = imageUris;
     }
 
-    public Memory(String title, String description, String date) {
+    public Memory(String title, String description, String date, String albumId) {
         this.title = title;
         this.description = description;
         this.date = date;
+        this.albumId = albumId; // Add this line
     }
 
     public long getId() {
@@ -89,7 +95,12 @@ public class Memory {
     public void setImageUris(ArrayList<String> imageUris) {
         this.imageUris = imageUris;
     }
+    public String getAlbumId() {
+        return albumId;
+    }
 
-    // ... Remaining getters and setters
+    public void setAlbumId(String albumId) {
+        this.albumId = albumId;
+    }
 }
 

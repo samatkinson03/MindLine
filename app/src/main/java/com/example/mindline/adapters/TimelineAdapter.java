@@ -35,7 +35,6 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         setMemoryList(memories, birthYear);
     }
 
-
     public void setMemoryList(List<Memory> memories, int birthYear) {
         timelineItems.clear();
 
@@ -43,7 +42,6 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             // Sort the memories list by their dates in descending order
             memories.sort(Comparator.comparing(Memory::getDate).reversed());
         }
-
         // Create a list of years from the current year to the birth year
         Calendar calendar = Calendar.getInstance();
         int currentYearInt = calendar.get(Calendar.YEAR);
@@ -75,10 +73,8 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                 }
             }
         }
-
         notifyDataSetChanged();
     }
-
 
     @NonNull
     @Override
@@ -92,7 +88,6 @@ public class TimelineAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             return new MemoryViewHolder(view, onMemoryClickListener);
         }
     }
-
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         Object timelineItem = timelineItems.get(position);

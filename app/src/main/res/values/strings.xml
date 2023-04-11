@@ -34,4 +34,6 @@
     <string name="confirm_password_hint">Confirm Password</string>
     <string name="back">Back</string>
     <string name="log_out">Log Out</string>
+    <string name="full_screen_image">full screen image</string>
+    <string name="confirm">Confirm</string>
 </resources>

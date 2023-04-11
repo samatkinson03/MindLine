@@ -52,10 +52,6 @@ public class SearchFragment extends Fragment {
         return view;
     }
 
-
-
-
-
     private void performSearch(String query) {
         memoryViewModel.searchMemories(query).observe(getViewLifecycleOwner(), memories -> {
             memoryList.clear();

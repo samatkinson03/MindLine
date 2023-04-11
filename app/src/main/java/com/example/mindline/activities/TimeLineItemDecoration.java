@@ -13,7 +13,6 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mindline.R;
-
 import com.example.mindline.adapters.TimelineAdapter;
 import com.example.mindline.models.Memory;
 import com.example.mindline.utils.DateTimeUtils;
@@ -90,35 +89,39 @@ public class TimeLineItemDecoration extends RecyclerView.ItemDecoration {
         }
     }
 
-
-
     private String getYear(RecyclerView parent, int position) {
+        // Get the adapter for the RecyclerView and retrieve the list of timeline items
         TimelineAdapter adapter = (TimelineAdapter) parent.getAdapter();
         List<Object> timelineItems = adapter.getTimelineItems();
+        // Check if the list of items is not null and the position is within the bounds of the list
         if (timelineItems != null && timelineItems.size() > position) {
+            // Get the item at the specified position
             Object item = timelineItems.get(position);
+            // If the item is a Memory object, get the date and return the year component
             if (item instanceof Memory) {
                 String dateStr = ((Memory) item).getDate();
                 Date date = DateTimeUtils.parseDate(dateStr);
+                // If the date can be parsed, return the year component
                 if (date != null) {
                     return DateTimeUtils.getYearFromDate(date);
                 }
-            } else if (item instanceof String) {
+            }
+            // If the item is a string, return the string
+            else if (item instanceof String) {
                 return (String) item;
             }
         }
+        // If the list is null or the position is out of bounds, return null
         return null;
     }
 
-
-
-
     private void drawYearMarkerText(Canvas canvas, String text, int cx, int cy) {
+        // Create a new Paint object with white color and 80% of the year marker radius
         Paint textPaint = new Paint();
         textPaint.setColor(Color.WHITE);
         textPaint.setTextSize(yearMarkerRadius * 0.8f);
         textPaint.setTextAlign(Paint.Align.CENTER);
-
+        // Draw the text on the canvas at the specified center position
         canvas.drawText(text, cx, cy + textPaint.getTextSize() / 3, textPaint);
     }
 }

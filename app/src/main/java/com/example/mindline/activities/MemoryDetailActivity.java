@@ -18,9 +18,13 @@ public class MemoryDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_memory_detail);
 
+        showMemoryDetailFragment();
+    }
+
+    private void showMemoryDetailFragment() {
         // Get memoryId from the Intent
         long memoryId = getIntent().getLongExtra("memory_id", -1);
-
+        System.out.println("oh" + memoryId);
         // Pass the memoryId to the MemoryDetailFragment
         Bundle args = new Bundle();
         args.putLong("memory_id", memoryId);
@@ -34,9 +38,10 @@ public class MemoryDetailActivity extends AppCompatActivity {
         fragmentTransaction.commit();
     }
 
+    //Method to take user back to previous activity
     @Override
     public void onBackPressed() {
-        Log.d("MemoryDetailActivity", "Back button pressed 2");
+        Log.d("MemoryDetailActivity", "Back button pressed");
         super.onBackPressed();
     }
 }

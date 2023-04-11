@@ -3,6 +3,7 @@ package com.example.mindline.fragments;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,9 +23,17 @@ import com.example.mindline.activities.EditMemoryActivity;
 import com.example.mindline.adapters.ImageAdapter;
 import com.example.mindline.models.Memory;
 import com.example.mindline.models.MemoryViewModel;
+import com.example.mindline.utils.GooglePhotosUtils;
+import com.google.android.gms.auth.GoogleAuthException;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class MemoryDetailFragment extends Fragment {
 
@@ -36,6 +45,9 @@ public class MemoryDetailFragment extends Fragment {
     private RecyclerView memoryImagesRecyclerView;
     private MemoryViewModel memoryViewModel;
 
+    private List<Uri> imageUris;
+    private List<String> imageUriStrings;
+    private List<Uri> imageUrisToDisplay;
 
     public MemoryDetailFragment() {
         // Required empty public constructor
@@ -72,6 +84,7 @@ public class MemoryDetailFragment extends Fragment {
             }
             return false;
         });
+
         if (getArguments() != null) {
             long memoryId = getArguments().getLong("memory_id");
             memoryViewModel.getMemoryById(memoryId).observe(getViewLifecycleOwner(), this::displayMemoryDetails);
@@ -89,17 +102,83 @@ public class MemoryDetailFragment extends Fragment {
                 memoryDescriptionTextView.setText(memory.getDescription());
             }
 
-            List<Uri> imageUris = new ArrayList<>();
-            for (String uriString : memory.getImageUris()) {
-                imageUris.add(Uri.parse(uriString));
+            imageUriStrings = new ArrayList<>(memory.getImageUris());
+            imageUris = new ArrayList<>();
+            imageUrisToDisplay = new ArrayList<>();
+
+            // Add local image Uris to list of image Uris to display
+            for (String imageUriString : imageUriStrings) {
+                Uri imageUri = Uri.parse(imageUriString);
+                if (GooglePhotosUtils.isLocalFileUri(requireContext(), imageUri)) {
+                    imageUris.add(imageUri);
+                }
             }
 
-            if (!imageUris.isEmpty()) {
-                memoryImagesLabel.setVisibility(View.VISIBLE);
-                memoryImagesRecyclerView.setVisibility(View.VISIBLE);
-                memoryImagesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
-                memoryImagesRecyclerView.setAdapter(new ImageAdapter(requireContext(), (ArrayList<Uri>) imageUris));
+            // Initialize the adapter with local images (if any)
+            setupMemoryImagesAdapter(imageUris);
+
+            // Add image Uris from Google Photos to list of image Uris to display
+            GoogleSignInAccount googleSignInAccount = GoogleSignIn.getLastSignedInAccount(requireActivity());
+            if (googleSignInAccount != null) {
+                GoogleAccountCredential credential = GoogleAccountCredential.usingOAuth2(requireContext(), Collections.singleton("https://www.googleapis.com/auth/photoslibrary"));
+                credential.setSelectedAccount(googleSignInAccount.getAccount());
+                new GetAccessTokenTask().execute(credential);
             }
+        }
+    }
+
+    private class GetAccessTokenTask extends AsyncTask<GoogleAccountCredential, Void, String> {
+        @Override
+        protected String doInBackground(GoogleAccountCredential... credentials) {
+            try {
+                return credentials[0].getToken();
+            } catch (IOException | GoogleAuthException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String accessToken) {
+            if (accessToken != null) {
+                // Code that uses the access token for Google Photos API calls
+                GooglePhotosUtils.getImagesFromGooglePhotos(requireContext(), accessToken, imageUriStrings, mediaItems -> {
+                    List<Uri> imageUrisFromGoogle = mediaItems.stream()
+                            .filter(mediaItem -> imageUriStrings.contains(mediaItem.id))
+                            .map(mediaItem -> Uri.parse(mediaItem.baseUrl))
+                            .collect(Collectors.toList());
+                    imageUrisToDisplay.addAll(imageUrisFromGoogle);
+
+                    // Update the adapter with local images and Google Photos images
+                    updateMemoryImagesAdapter(imageUrisToDisplay);
+                });
+            } else {
+                // Handle the case where the access token is missing
+            }
+        }
+    }
+
+    private void updateMemoryImagesAdapter(List<Uri> imageUris) {
+        if (imageUris != null && !imageUris.isEmpty()) {
+            memoryImagesLabel.setVisibility(View.VISIBLE);
+            memoryImagesRecyclerView.setVisibility(View.VISIBLE);
+            ImageAdapter memoryImagesAdapter = (ImageAdapter) memoryImagesRecyclerView.getAdapter();
+            if (memoryImagesAdapter != null) {
+                memoryImagesAdapter.updateImageUris((ArrayList<Uri>) imageUris);
+            } else {
+                setupMemoryImagesAdapter(imageUris);
+            }
+        }
+    }
+
+    private void setupMemoryImagesAdapter(List<Uri> imageUris) {
+        if (imageUris != null && !imageUris.isEmpty()) {
+            memoryImagesLabel.setVisibility(View.VISIBLE);
+            memoryImagesRecyclerView.setVisibility(View.VISIBLE);
+            memoryImagesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
+
+            ImageAdapter memoryImagesAdapter = new ImageAdapter(requireContext(), (ArrayList<Uri>) imageUris);
+            memoryImagesRecyclerView.setAdapter(memoryImagesAdapter);
         }
     }
 
@@ -114,19 +193,15 @@ public class MemoryDetailFragment extends Fragment {
 
     private void deleteMemory() {
         if (getContext() != null) {
-            new AlertDialog.Builder(getContext())
-                    .setTitle(R.string.delete_memory)
-                    .setMessage(R.string.delete_memory_confirmation)
-                    .setPositiveButton(R.string.yes, (dialog, which) -> {
-                        if (getArguments() != null) {
-                            long memoryId = getArguments().getLong("memory_id");
-                            memoryViewModel.deleteMemoryById(memoryId);
-                            requireActivity().onBackPressed();
-                        }
-                    })
-                    .setNegativeButton(R.string.no, null)
-                    .show();
+            new AlertDialog.Builder(getContext()).setTitle(R.string.delete_memory).setMessage(R.string.delete_memory_confirmation).setPositiveButton(R.string.yes, (dialog, which) -> {
+                if (getArguments() != null) {
+                    long memoryId = getArguments().getLong("memory_id");
+                    memoryViewModel.deleteMemoryById(memoryId);
+                    requireActivity().onBackPressed();
+                }
+            }).setNegativeButton(R.string.no, null).show();
         }
-
     }
+
 }
+
