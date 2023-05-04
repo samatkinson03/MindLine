@@ -79,6 +79,12 @@ public class AddMemoryFragment extends Fragment {
                 throw new RuntimeException(e);
             }
         });
+        ImageButton backButton = view.findViewById(R.id.back_button);
+        backButton.setOnClickListener(v -> {
+            if (getActivity() != null) {
+                getActivity().onBackPressed();
+            }
+        });
 
         selectedImagesRecyclerView = view.findViewById(R.id.selected_images_recycler_view);
         selectedImagesRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
