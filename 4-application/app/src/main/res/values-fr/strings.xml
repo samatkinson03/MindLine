@@ -1,0 +1,39 @@
+<resources>
+    <string name="app_name">MindLine</string>
+    <string name="delete_memory">Supprimer le souvenir</string>
+    <string name="delete_memory_confirmation">Voulez-vous vraiment supprimer ce souvenir ?</string>
+    <string name="yes">Oui</string>
+    <string name="no">Non</string>
+    <string name="search">Rechercher</string>
+    <string name="edit_memory">Modifier le souvenir</string>
+    <string name="add_memory">Ajouter un souvenir</string>
+    <string name="sign_in">Se connecter</string>
+    <string name="email">E-mail</string>
+    <string name="password">Mot de passe</string>
+    <!-- Sign In Activity -->
+    <string name="sign_in_title">Se connecter</string>
+    <string name="email_hint">E-mail</string>
+    <string name="password_hint">Mot de passe</string>
+    <string name="sign_in_button">Se connecter</string>
+    <string name="no_account_message">Vous n'avez pas de compte ?</string>
+    <string name="sign_up_link">S'inscrire</string>
+
+    <!-- Sign Up Activity -->
+    <string name="sign_up">S'inscrire</string>
+    <string name="name_hint">Nom</string>
+    <string name="dob_hint">Date de naissance (JJ/MM/AAAA)</string>
+    <string name="create_account_button">Créer un compte</string>
+    <string name="already_have_account_message">Vous avez déjà un compte ?</string>
+    <string name="sign_in_link">Se connecter</string>
+
+    <!-- Date of Birth Activity -->
+    <string name="dob_activity_title">Date de naissance</string>
+    <string name="dob_continue_button">Continuer</string>
+    <string name="sign_up_button_text">S'inscrire</string>
+    <string name="date_of_birth">Date de naissance</string>
+    <string name="confirm_password_hint">Confirmer le mot de passe</string>
+    <string name="back">Retour</string>
+    <string name="log_out">Se déconnecter</string>
+    <string name="full_screen_image">Image en plein écran</string>
+    <string name="confirm">Confirmer</string>
+</resources>
