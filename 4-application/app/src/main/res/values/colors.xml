@@ -16,4 +16,10 @@
     <color name="purple_200">#E1BEE7</color>
     <color name="timeline_color">#000000</color>
     <color name="grey">#8E918F</color>
+    <color name="timeline_color_light">#000000</color>
+    <color name="text_color_light">#000000</color>
+    <color name="text_color">#000000</color>
+    <color name="timeline_text_color">#000000</color>
+
+
 </resources>

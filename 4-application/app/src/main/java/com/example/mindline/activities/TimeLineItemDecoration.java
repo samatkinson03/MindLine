@@ -27,18 +27,24 @@ public class TimeLineItemDecoration extends RecyclerView.ItemDecoration {
     private int yearMarkerRadius;
     private int yearMarkerPadding;
     private int linePadding;
+    private int textColor;
+
 
     public TimeLineItemDecoration(Context context) {
         Resources resources = context.getResources();
 
+        // Get the colors for the current theme
+        int timelineColor = ContextCompat.getColor(context, R.color.timeline_color);
+        textColor = ContextCompat.getColor(context, R.color.text_color);
+
         // Set up the paint for the timeline line
         linePaint = new Paint();
-        linePaint.setColor(ContextCompat.getColor(context, R.color.timeline_color));
+        linePaint.setColor(timelineColor);
         linePaint.setStrokeWidth(resources.getDimensionPixelSize(R.dimen.timeline_width));
 
         // Set up the paint for the year markers
         yearMarkerPaint = new Paint();
-        yearMarkerPaint.setColor(ContextCompat.getColor(context, R.color.timeline_color));
+        yearMarkerPaint.setColor(timelineColor);
         yearMarkerPaint.setStyle(Paint.Style.FILL);
 
         // Set the size and padding of the year markers
@@ -116,12 +122,13 @@ public class TimeLineItemDecoration extends RecyclerView.ItemDecoration {
     }
 
     private void drawYearMarkerText(Canvas canvas, String text, int cx, int cy) {
-        // Create a new Paint object with white color and 80% of the year marker radius
+        // Create a new Paint object with the text color and 80% of the year marker radius
         Paint textPaint = new Paint();
-        textPaint.setColor(Color.WHITE);
+        textPaint.setColor(textColor);
         textPaint.setTextSize(yearMarkerRadius * 0.8f);
         textPaint.setTextAlign(Paint.Align.CENTER);
         // Draw the text on the canvas at the specified center position
         canvas.drawText(text, cx, cy + textPaint.getTextSize() / 3, textPaint);
     }
+
 }

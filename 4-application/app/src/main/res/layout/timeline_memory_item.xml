@@ -9,16 +9,16 @@
         android:id="@+id/memory_title_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/black"
+        android:textColor="@color/timeline_text_color"
         android:textSize="16sp"
-        android:textStyle="normal" />
+        android:textStyle="bold" />
 
     <TextView
         android:id="@+id/memory_date_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textColor="@color/grey"
-        android:textSize="14sp" />
+        android:textColor="@color/timeline_text_color"
+        android:textSize="14sp"
+        android:layout_marginTop="4dp" />
 
 </LinearLayout>
